@@ -161,7 +161,7 @@ THREE.DataParser.prototype = {
 
 		var uint16 = this.dataView.getUint16( this.offset, this.littleEndian );
 		this.offset += INT16_SIZE;
-		return DataParser.decodeFloat16( uint16 );
+		return THREE.DataParser.decodeFloat16( uint16 );
 
 	},
 
