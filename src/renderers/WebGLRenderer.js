@@ -1512,6 +1512,8 @@ function WebGLRenderer( parameters ) {
 
 		if ( programChange ) {
 
+			console.trace( parameters );
+
 			program = programCache.acquireProgram( parameters, programCacheKey );
 
 			materialProperties.program = program;
@@ -1617,6 +1619,7 @@ function WebGLRenderer( parameters ) {
 
 		var materialProperties = properties.get( material );
 		var lights = currentRenderState.state.lights;
+		var _currentEncoding = ( _currentRenderTarget === null ) ? _this.outputEncoding : _currentRenderTarget.texture.encoding;
 
 		if ( _clippingEnabled ) {
 
@@ -1661,7 +1664,7 @@ function WebGLRenderer( parameters ) {
 
 				initMaterial( material, scene, object );
 
-			} else if ( materialProperties.outputEncoding !== _this.outputEncoding ) {
+			} else if ( materialProperties.outputEncoding !== _currentEncoding ) {
 
 				initMaterial( material, scene, object );
 
