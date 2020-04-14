@@ -23564,6 +23564,7 @@ function WebGLRenderer( parameters ) {
 		_currentCamera = null,
 		_currentArrayCamera = null,
 
+		_currentEncoding = this.outputEncoding,
 		_currentViewport = new Vector4(),
 		_currentScissor = new Vector4(),
 		_currentScissorTest = null,
@@ -24933,8 +24934,6 @@ function WebGLRenderer( parameters ) {
 
 		if ( programChange ) {
 
-			console.trace( parameters );
-
 			program = programCache.acquireProgram( parameters, programCacheKey );
 
 			materialProperties.program = program;
@@ -25040,7 +25039,6 @@ function WebGLRenderer( parameters ) {
 
 		var materialProperties = properties.get( material );
 		var lights = currentRenderState.state.lights;
-		var _currentEncoding = ( _currentRenderTarget === null ) ? _this.outputEncoding : _currentRenderTarget.texture.encoding;
 
 		if ( _clippingEnabled ) {
 
@@ -26058,12 +26056,14 @@ function WebGLRenderer( parameters ) {
 
 			}
 
+			_currentEncoding = renderTarget.texture.encoding;
 			_currentViewport.copy( renderTarget.viewport );
 			_currentScissor.copy( renderTarget.scissor );
 			_currentScissorTest = renderTarget.scissorTest;
 
 		} else {
 
+			_currentEncoding = this.outputEncoding;
 			_currentViewport.copy( _viewport ).multiplyScalar( _pixelRatio ).floor();
 			_currentScissor.copy( _scissor ).multiplyScalar( _pixelRatio ).floor();
 			_currentScissorTest = _scissorTest;
