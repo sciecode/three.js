@@ -257,7 +257,7 @@ PMREMGenerator.prototype = {
 		var fov = 90;
 		var aspect = 1;
 		var cubeCamera = new PerspectiveCamera( fov, aspect, near, far );
-		var upSign = [ 1, 1, 1, - 1, 1, 1 ];
+		var upSign = [ 1, 1, - 1, 1, 1, 1 ];
 		var forwardSign = [ 1, - 1, 1, - 1, 1, - 1 ];
 		var renderer = this._renderer;
 
@@ -802,9 +802,10 @@ vec3 getDirection(vec2 uv, float face) {
 		direction.xz *= -1.0;
 	} else if ( face == 2.0 ) { // pos_y
 		direction = direction.xzy;
+		direction.xz *= - 1.0;
 	} else if (face == 3.0) { // neg_y
 		direction = direction.xzy;
-		direction.yz *= -1.0;
+		direction.xy *= -1.0;
 	} else if (face == 4.0) { // pos_z
 		direction.x *= -1.0;
 	} else if (face == 5.0) { // neg_z

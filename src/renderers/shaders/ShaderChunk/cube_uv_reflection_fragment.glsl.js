@@ -32,13 +32,13 @@ vec2 getUV(vec3 direction, float face) {
 	if (face == 0.0) { // pos_x
 		uv = direction.zy / abs(direction.x);
 	} else if (face == 1.0) { // pos_y
-		uv = direction.xz / abs(direction.y);
+		uv = vec2(-direction.x, -direction.z) / abs(direction.y);
 	} else if (face == 2.0) { // pos_z
 		uv = vec2(-direction.x, direction.y) / abs(direction.z);
 	} else if (face == 3.0) { // neg_x
 		uv = vec2(-direction.z, direction.y) / abs(direction.x);
 	} else if (face == 4.0) { // neg_y
-		uv = vec2(direction.x, -direction.z) / abs(direction.y);
+		uv = vec2(-direction.x, direction.z) / abs(direction.y);
 	} else { // neg_z
 		uv = direction.xy / abs(direction.z);
 	}
