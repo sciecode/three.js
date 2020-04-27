@@ -37,49 +37,126 @@
 			var torusMesh, planeMesh;
 			var generatedCubeRenderTarget, ldrCubeRenderTarget, hdrCubeRenderTarget, rgbmCubeRenderTarget;
 			var ldrCubeMap, hdrCubeMap, rgbmCubeMap;
+			var font;
 
-			init();
-			animate();
+			var loader = new THREE.FontLoader().load( 'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', init );
 
 			function getEnvScene() {
 
 				var envScene = new THREE.Scene();
 
-				var geometry = new THREE.BoxBufferGeometry();
-				geometry.deleteAttribute( 'uv' );
-				var roomMaterial = new THREE.MeshStandardMaterial( { metalness: 0, side: THREE.BackSide } );
-				var room = new THREE.Mesh( geometry, roomMaterial );
-				room.scale.setScalar( 10 );
-				envScene.add( room );
+				var options = {
+					font: font,
+					size: 4,
+					height: 0,
+					bevelEnabled: false
+				}
 
-				var mainLight = new THREE.PointLight( 0xffffff, 50, 0, 2 );
-				envScene.add( mainLight );
 
-				var lightMaterial = new THREE.MeshLambertMaterial( { color: 0x000000, emissive: 0xffffff, emissiveIntensity: 10 } );
+				var i = 1;
+				var plane = new THREE.PlaneBufferGeometry( 22, 22 );
+				var color = new THREE.Color();
+				var color2 = new THREE.Color();
+				var tmp;
 
-				var light1 = new THREE.Mesh( geometry, lightMaterial );
-				light1.material.color.setHex( 0xff0000 );
-				light1.position.set( - 5, 2, 0 );
-				light1.scale.set( 0.1, 1, 1 );
-				envScene.add( light1 );
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_z_n = new THREE.TextGeometry( 'Z-', options );
+				var mat_z_n = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var z_n = new THREE.Mesh( geo_z_n, mat_z_n );
+				z_n.position.set( -2, -2, -10 );
+				envScene.add( z_n );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.z = - 11;
+				envScene.add( tmp );
 
-				var light2 = new THREE.Mesh( geometry, lightMaterial.clone() );
-				light2.material.color.setHex( 0x00ff00 );
-				light2.position.set( 0, 5, 0 );
-				light2.scale.set( 1, 0.1, 1 );
-				envScene.add( light2 );
+				i++;
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_z_p = new THREE.TextGeometry( 'Z+', options );
+				var mat_z_p = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var z_p = new THREE.Mesh( geo_z_p, mat_z_p );
+				z_p.position.set( 2, -2, 10 );
+				z_p.rotation.y += Math.PI;
+				envScene.add( z_p );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.z = 11;
+				tmp.rotation.y += Math.PI;
+				envScene.add( tmp );
 
-				var light3 = new THREE.Mesh( geometry, lightMaterial.clone() );
-				light3.material.color.setHex( 0x0000ff );
-				light3.position.set( 2, 1, 5 );
-				light3.scale.set( 1.5, 2, 0.1 );
-				envScene.add( light3 );
+
+				i++;
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_x_p = new THREE.TextGeometry( 'X+', options );
+				var mat_x_p = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var x_p = new THREE.Mesh( geo_x_p, mat_x_p );
+				x_p.position.set( 10, -2, -2 );
+				x_p.rotation.y -= Math.PI / 2;
+				envScene.add( x_p );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.x =  11;
+				tmp.rotation.y -= Math.PI / 2;
+				envScene.add( tmp );
+
+
+				i++;
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_x_n = new THREE.TextGeometry( 'X-', options );
+				var mat_x_n = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var x_n = new THREE.Mesh( geo_x_n, mat_x_n );
+				x_n.position.set( -10, -2, 2 );
+				x_n.rotation.y = Math.PI / 2;
+				envScene.add( x_n );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.x = - 11;
+				tmp.rotation.y = Math.PI / 2;
+				envScene.add( tmp );
+
+
+				i++;
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_y_n = new THREE.TextGeometry( 'Y-', options );
+				var mat_y_n = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var y_n = new THREE.Mesh( geo_y_n, mat_y_n );
+				y_n.position.set( -2, -10, 2 );
+				y_n.rotation.x -= Math.PI / 2;
+				envScene.add( y_n );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.y = - 11;
+				tmp.rotation.x -= Math.PI / 2;
+				envScene.add( tmp );
+
+
+				i++;
+				color.r = color2.g = i & 4 ? 0.9 : 0.3
+				color.g = color2.b = i & 2 ? 0.9 : 0.3
+				color.b = color2.r = i & 1 ? 0.9 : 0.3
+				var geo_y_p = new THREE.TextGeometry( 'Y+', options );
+				var mat_y_p = new THREE.MeshBasicMaterial( { color: color.getHex(), side: THREE.DoubleSide } )
+				var y_p = new THREE.Mesh( geo_y_p, mat_y_p );
+				y_p.position.set( -2, 10, -2 );
+				y_p.rotation.x += Math.PI / 2;
+				envScene.add( y_p );
+				tmp = new THREE.Mesh( plane, new THREE.MeshBasicMaterial( { color: color2.getHex(), side: THREE.DoubleSide } ) );
+				tmp.position.y = 11;
+				tmp.rotation.x += Math.PI / 2;
+				envScene.add( tmp );
 
 				return envScene;
 
 			}
 
-			function init() {
+			function init( f ) {
+
+				font = f;
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -166,7 +243,7 @@
 				pmremGenerator.compileCubemapShader();
 
 				var envScene = getEnvScene();
-				generatedCubeRenderTarget = pmremGenerator.fromScene( envScene, 0.04 );
+				generatedCubeRenderTarget = pmremGenerator.fromScene( envScene, 0.0 );
 
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -192,6 +269,8 @@
 				gui.add( params, 'exposure', 0, 2, 0.01 );
 				gui.add( params, 'debug', false );
 				gui.open();
+
+				animate();
 
 			}
 
