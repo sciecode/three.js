@@ -6,6 +6,7 @@
 import {
 	Euler,
 	EventDispatcher,
+	Vector2,
 	Vector3
 } from "../../../build/three.module.js";
 
@@ -19,6 +20,8 @@ var PointerLockControls = function ( camera, domElement ) {
 	}
 
 	this.domElement = domElement;
+	this.enableDamping = false;
+	this.dampingFactor = 0.1;
 	this.isLocked = false;
 
 	//
@@ -32,6 +35,7 @@ var PointerLockControls = function ( camera, domElement ) {
 	var unlockEvent = { type: 'unlock' };
 
 	var euler = new Euler( 0, 0, 0, 'YXZ' );
+	var eulerDelta = new Vector2( 0, 0 );
 
 	var PI_2 = Math.PI / 2;
 
@@ -44,14 +48,10 @@ var PointerLockControls = function ( camera, domElement ) {
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
 
-		euler.setFromQuaternion( camera.quaternion );
+		eulerDelta.x -= movementY * 0.02;
+		eulerDelta.y -= movementX * 0.02;
 
-		euler.y -= movementX * 0.002;
-		euler.x -= movementY * 0.002;
-
-		euler.x = Math.max( - PI_2, Math.min( PI_2, euler.x ) );
-
-		camera.quaternion.setFromEuler( euler );
+		scope.update();
 
 		scope.dispatchEvent( changeEvent );
 
@@ -151,6 +151,39 @@ var PointerLockControls = function ( camera, domElement ) {
 	this.unlock = function () {
 
 		document.exitPointerLock();
+
+	};
+
+	this.update = function () {
+
+		euler.setFromQuaternion( camera.quaternion );
+
+		if ( scope.enableDamping ) {
+
+			euler.x += eulerDelta.x * scope.dampingFactor;
+			euler.y += eulerDelta.y * scope.dampingFactor;
+
+		} else {
+
+			euler.x += eulerDelta.x;
+			euler.y += eulerDelta.y;
+
+		}
+
+		euler.x = Math.max( - PI_2, Math.min( PI_2, euler.x ) );
+
+		camera.quaternion.setFromEuler( euler );
+
+		if ( scope.enableDamping ) {
+
+			eulerDelta.x *= ( 1 - scope.dampingFactor );
+			eulerDelta.y *= ( 1 - scope.dampingFactor );
+
+		} else {
+
+			eulerDelta.set( 0, 0 );
+
+		}
 
 	};
 

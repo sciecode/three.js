@@ -97,6 +97,7 @@
 				scene.add( light );
 
 				controls = new PointerLockControls( camera, document.body );
+				controls.enableDamping = true;
 
 				var blocker = document.getElementById( 'blocker' );
 				var instructions = document.getElementById( 'instructions' );
@@ -331,6 +332,8 @@
 						canJump = true;
 
 					}
+
+					controls.update();
 
 					prevTime = time;
 
