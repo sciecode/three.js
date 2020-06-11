@@ -20,12 +20,13 @@
 
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { OrbitControls } from './jsm/controls/OrbitControls.js';
+			import { RGBELoader } from "./jsm/loaders/RGBELoader.js";
 
 			var controls, camera, scene, renderer;
 			var cameraCube, sceneCube;
-			var textureEquirec, textureCube;
+			var textureEquirec, textureCube, texturePmrem;
 			var cubeMesh, sphereMesh;
-			var sphereMaterial;
+			var sphereLambertMaterial, sphereStandardMaterial;
 
 			init();
 			animate();
@@ -60,7 +61,16 @@
 
 				var textureLoader = new THREE.TextureLoader();
 
-				textureEquirec = textureLoader.load( 'textures/2294472375_24a3b8ef46_o.jpg' );
+				textureEquirec = textureLoader.load( 'textures/2294472375_24a3b8ef46_o.jpg', (texture) => {
+
+					texturePmrem = pmremGenerator.fromEquirectangular(texture).texture;
+					texturePmrem.mapping = THREE.CubeUVReflectionMapping;
+					pmremGenerator.dispose();
+
+					pmremMaterial.envMap = texturePmrem;
+
+				} );
+
 				textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
 				textureEquirec.encoding = THREE.sRGBEncoding;
 
@@ -101,6 +111,13 @@
 
 				cubeMaterial.envMap = textureCube;
 
+				var pmremMaterial = new THREE.MeshStandardMaterial( {
+					depthWrite: false,
+					side: THREE.BackSide,
+					metalness: 1.0,
+					roughness: 0.0
+				}) ;
+
 				// Skybox
 
 				cubeMesh = new THREE.Mesh( new THREE.BoxBufferGeometry( 100, 100, 100 ), cubeMaterial );
@@ -109,8 +126,16 @@
 				//
 
 				var geometry = new THREE.SphereBufferGeometry( 400.0, 48, 24 );
-				sphereMaterial = new THREE.MeshLambertMaterial( { envMap: textureCube } );
-				sphereMesh = new THREE.Mesh( geometry, sphereMaterial );
+				sphereLambertMaterial = new THREE.MeshLambertMaterial( {
+					envMap: textureCube,
+				} );
+
+				sphereStandardMaterial = new THREE.MeshStandardMaterial( {
+					envMap: textureCube,
+					metalness: 1.0,
+					roughness: 0.0
+				 } );
+				sphereMesh = new THREE.Mesh( geometry, sphereLambertMaterial );
 
 				scene.add( sphereMesh );
 
@@ -132,21 +157,35 @@
 
 				//
 
+				var pmremGenerator = new THREE.PMREMGenerator( renderer );
+				pmremGenerator.compileEquirectangularShader();
+
 				var params = {
 					Cube: function () {
 
 						cubeMesh.material = cubeMaterial;
 						cubeMesh.visible = true;
-						sphereMaterial.envMap = textureCube;
-						sphereMaterial.needsUpdate = true;
+						sphereMesh.material = sphereLambertMaterial;
+						sphereLambertMaterial.envMap = textureCube;
+						sphereLambertMaterial.needsUpdate = true;
 
 					},
 					Equirectangular: function () {
 
 						cubeMesh.material = equirectMaterial;
 						cubeMesh.visible = true;
-						sphereMaterial.envMap = textureEquirec;
-						sphereMaterial.needsUpdate = true;
+						sphereMesh.material = sphereLambertMaterial;
+						sphereLambertMaterial.envMap = textureEquirec;
+						sphereLambertMaterial.needsUpdate = true;
+
+					},
+					PMREM: function () {
+
+						cubeMesh.material = equirectMaterial;
+						cubeMesh.visible = true;
+						sphereMesh.material = sphereStandardMaterial;
+						sphereStandardMaterial.envMap = texturePmrem;
+						sphereStandardMaterial.needsUpdate = true;
 
 					},
 					Refraction: false
@@ -155,21 +194,25 @@
 				var gui = new GUI();
 				gui.add( params, 'Cube' );
 				gui.add( params, 'Equirectangular' );
+				gui.add( params, 'PMREM' );
 				gui.add( params, 'Refraction' ).onChange( function ( value ) {
 
 					if ( value ) {
 
 						textureEquirec.mapping = THREE.EquirectangularRefractionMapping;
 						textureCube.mapping = THREE.CubeRefractionMapping;
+						texturePmrem.mapping = THREE.CubeUVRefractionMapping;
 
 					} else {
 
 						textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
 						textureCube.mapping = THREE.CubeReflectionMapping;
+						texturePmrem.mapping = THREE.CubeUVReflectionMapping;
 
 					}
 
-					sphereMaterial.needsUpdate = true;
+					sphereLambertMaterial.needsUpdate = true;
+					sphereStandardMaterial.needsUpdate = true;
 
 				} );
 				gui.open();
