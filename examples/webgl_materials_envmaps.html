@@ -20,34 +20,84 @@
 
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { OrbitControls } from './jsm/controls/OrbitControls.js';
-			import { RGBELoader } from "./jsm/loaders/RGBELoader.js";
 
 			var controls, camera, scene, renderer;
-			var cameraCube, sceneCube;
-			var textureEquirec, textureCube, texturePmrem;
-			var cubeMesh, sphereMesh;
-			var sphereLambertMaterial, sphereStandardMaterial;
+			var cameraCube, pmremGenerator;
+			var textureCube, pmremTexture;
+			var cubeMesh, sphereMesh, sphereMesh2;
+			var sphereMaterial, sphereMaterial2, params;
 
 			init();
 			animate();
 
 			function init() {
 
+				// RENDERER
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.autoClear = false;
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				renderer.outputEncoding = THREE.sRGBEncoding;
+
 				// CAMERAS
 
 				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 100000 );
 				camera.position.set( 0, 0, 1000 );
-				cameraCube = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 100000 );
 
 				// SCENE
 
 				scene = new THREE.Scene();
-				sceneCube = new THREE.Scene();
 
 				// Lights
 
 				var ambient = new THREE.AmbientLight( 0xffffff );
 				scene.add( ambient );
+
+				params = {
+					metalness: 1.0,
+					roughness: 0.0,
+					transparency: 0.0,
+					IOR: 0.97,
+					refraction: true
+				};
+
+				// PMREM
+
+				pmremGenerator = new THREE.PMREMGenerator( renderer );
+				pmremGenerator.compileCubemapShader();
+
+				//
+
+				var geometry = new THREE.SphereBufferGeometry( 200, 48, 24 );
+
+				sphereMaterial = new THREE.MeshStandardMaterial( {
+					color: 0x9c9c9c,
+					metalness: params.metalness,
+					refractionRatio: params.IOR,
+					roughness: params.roughness
+				} );
+
+				sphereMaterial2 = new THREE.MeshPhysicalMaterial( {
+					color: 0x9c9c9c,
+					metalness: params.metalness,
+					roughness: params.roughness,
+					depthWrite: false,
+					transparency: params.transparency,
+					refractionRatio: params.IOR,
+					opacity: 1,
+					transparent: true
+				} );
+
+				sphereMesh = new THREE.Mesh( geometry, sphereMaterial );
+				sphereMesh.position.x -= 250;
+				scene.add( sphereMesh );
+
+				sphereMesh2 = new THREE.Mesh( geometry, sphereMaterial2 );
+				sphereMesh2.position.x += 250;
+				scene.add( sphereMesh2 );
 
 				// Textures
 
@@ -56,98 +106,21 @@
 							 r + 'posy.jpg', r + 'negy.jpg',
 							 r + 'posz.jpg', r + 'negz.jpg' ];
 
-				textureCube = new THREE.CubeTextureLoader().load( urls );
-				textureCube.encoding = THREE.sRGBEncoding;
+				textureCube = new THREE.CubeTextureLoader().load( urls, function( texture ) {
 
-				var textureLoader = new THREE.TextureLoader();
+					texture.encoding = THREE.sRGBEncoding;
+					scene.background = texture;
 
-				textureEquirec = textureLoader.load( 'textures/2294472375_24a3b8ef46_o.jpg', (texture) => {
+					pmremTexture = pmremGenerator.fromCubemap( texture ).texture;
+					pmremTexture.mapping = THREE.CubeUVRefractionMapping;
 
-					texturePmrem = pmremGenerator.fromEquirectangular(texture).texture;
-					texturePmrem.mapping = THREE.CubeUVReflectionMapping;
-					pmremGenerator.dispose();
+					sphereMesh.material.envMap = pmremTexture;
+					sphereMesh.material.needsUpdate = true;
 
-					pmremMaterial.envMap = texturePmrem;
-
-				} );
-
-				textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
-				textureEquirec.encoding = THREE.sRGBEncoding;
-
-				// Materials
-
-				var equirectShader = THREE.ShaderLib[ 'equirect' ];
-
-				var equirectMaterial = new THREE.ShaderMaterial( {
-					uniforms: THREE.UniformsUtils.clone( equirectShader.uniforms ),
-					fragmentShader: equirectShader.fragmentShader,
-					vertexShader: equirectShader.vertexShader,
-					depthWrite: false,
-					side: THREE.BackSide
-				} );
-
-				equirectMaterial.uniforms[ 'tEquirect' ].value = textureEquirec;
-
-				// enable code injection for non-built-in material
-				Object.defineProperty( equirectMaterial, 'map', {
-
-					get: function () {
-
-						return this.uniforms.tEquirect.value;
-
-					}
+					sphereMesh2.material.envMap = pmremTexture;
+					sphereMesh2.material.needsUpdate = true;
 
 				} );
-
-				var cubeShader = THREE.ShaderLib[ 'cube' ];
-
-				var cubeMaterial = new THREE.ShaderMaterial( {
-					uniforms: THREE.UniformsUtils.clone( cubeShader.uniforms ),
-					fragmentShader: cubeShader.fragmentShader,
-					vertexShader: cubeShader.vertexShader,
-					depthWrite: false,
-					side: THREE.BackSide
-				} );
-
-				cubeMaterial.envMap = textureCube;
-
-				var pmremMaterial = new THREE.MeshStandardMaterial( {
-					depthWrite: false,
-					side: THREE.BackSide,
-					metalness: 1.0,
-					roughness: 0.0
-				}) ;
-
-				// Skybox
-
-				cubeMesh = new THREE.Mesh( new THREE.BoxBufferGeometry( 100, 100, 100 ), cubeMaterial );
-				sceneCube.add( cubeMesh );
-
-				//
-
-				var geometry = new THREE.SphereBufferGeometry( 400.0, 48, 24 );
-				sphereLambertMaterial = new THREE.MeshLambertMaterial( {
-					envMap: textureCube,
-				} );
-
-				sphereStandardMaterial = new THREE.MeshStandardMaterial( {
-					envMap: textureCube,
-					metalness: 1.0,
-					roughness: 0.0
-				 } );
-				sphereMesh = new THREE.Mesh( geometry, sphereLambertMaterial );
-
-				scene.add( sphereMesh );
-
-				//
-
-				renderer = new THREE.WebGLRenderer();
-				renderer.autoClear = false;
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				document.body.appendChild( renderer.domElement );
-
-				renderer.outputEncoding = THREE.sRGBEncoding;
 
 				//
 
@@ -157,62 +130,31 @@
 
 				//
 
-				var pmremGenerator = new THREE.PMREMGenerator( renderer );
-				pmremGenerator.compileEquirectangularShader();
-
-				var params = {
-					Cube: function () {
-
-						cubeMesh.material = cubeMaterial;
-						cubeMesh.visible = true;
-						sphereMesh.material = sphereLambertMaterial;
-						sphereLambertMaterial.envMap = textureCube;
-						sphereLambertMaterial.needsUpdate = true;
-
-					},
-					Equirectangular: function () {
-
-						cubeMesh.material = equirectMaterial;
-						cubeMesh.visible = true;
-						sphereMesh.material = sphereLambertMaterial;
-						sphereLambertMaterial.envMap = textureEquirec;
-						sphereLambertMaterial.needsUpdate = true;
-
-					},
-					PMREM: function () {
-
-						cubeMesh.material = equirectMaterial;
-						cubeMesh.visible = true;
-						sphereMesh.material = sphereStandardMaterial;
-						sphereStandardMaterial.envMap = texturePmrem;
-						sphereStandardMaterial.needsUpdate = true;
-
-					},
-					Refraction: false
-				};
-
 				var gui = new GUI();
-				gui.add( params, 'Cube' );
-				gui.add( params, 'Equirectangular' );
-				gui.add( params, 'PMREM' );
-				gui.add( params, 'Refraction' ).onChange( function ( value ) {
+
+				// var physicalFolder = gui.addFolder('Physical');
+				// var standardFolder = gui.addFolder('Standard');
+				// var gui = gui.addFolder('Phong');
+
+				gui.add( params, 'roughness', 0, 0.3, 0.01 );
+				gui.add( params, 'metalness', 0, 1, 0.01 );
+				gui.add( params, 'transparency', 0, 1, 0.01 );
+				gui.add( params, 'IOR', 0.6, 1, 0.01 );
+				gui.add( params, 'refraction' ).onChange( function ( value ) {
 
 					if ( value ) {
 
-						textureEquirec.mapping = THREE.EquirectangularRefractionMapping;
-						textureCube.mapping = THREE.CubeRefractionMapping;
-						texturePmrem.mapping = THREE.CubeUVRefractionMapping;
+						pmremTexture.mapping = THREE.CubeUVRefractionMapping;
+
 
 					} else {
 
-						textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
-						textureCube.mapping = THREE.CubeReflectionMapping;
-						texturePmrem.mapping = THREE.CubeUVReflectionMapping;
+						pmremTexture.mapping = THREE.CubeUVReflectionMapping;
 
 					}
 
-					sphereLambertMaterial.needsUpdate = true;
-					sphereStandardMaterial.needsUpdate = true;
+					sphereMesh.material.needsUpdate = true;
+					sphereMesh2.material.needsUpdate = true;
 
 				} );
 				gui.open();
@@ -239,16 +181,16 @@
 
 				requestAnimationFrame( animate );
 
-				render();
+				sphereMesh.material.roughness = params.roughness;
+				sphereMesh.material.metalness = params.metalness;
+				sphereMesh.material.refractionRatio = params.IOR;
 
-			}
+				sphereMesh2.material.roughness = params.roughness;
+				sphereMesh2.material.metalness = params.metalness;
+				sphereMesh2.material.refractionRatio = params.IOR;
+				sphereMesh2.material.transparency = params.transparency;
 
-			function render() {
 
-				camera.lookAt( scene.position );
-				cameraCube.rotation.copy( camera.rotation );
-
-				renderer.render( sceneCube, cameraCube );
 				renderer.render( scene, camera );
 
 			}
