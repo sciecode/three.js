@@ -1,9 +1,9 @@
 export default /* glsl */`
 #ifdef ENVMAP_TYPE_CUBE_UV
 
-#define cubeUV_maxMipLevel 8.0
+#define cubeUV_maxMipLevel 9.0
 #define cubeUV_minMipLevel 4.0
-#define cubeUV_maxTileSize 256.0
+#define cubeUV_maxTileSize 512.0
 #define cubeUV_minTileSize 16.0
 
 // These shader functions convert between the UV coordinates of a single face of

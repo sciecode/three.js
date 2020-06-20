@@ -25,9 +25,9 @@
 			import { HDRCubeTextureLoader } from './jsm/loaders/HDRCubeTextureLoader.js';
 
 			var params = {
-				envMap: 'HDR',
+				envMap: 'LDR',
 				roughness: 0.0,
-				metalness: 0.0,
+				metalness: 1.0,
 				exposure: 2.0,
 				debug: false
 			};
@@ -96,7 +96,7 @@
 
 				//
 
-				var geometry = new THREE.TorusKnotBufferGeometry( 18, 8, 150, 20 );
+				var geometry = new THREE.TorusKnotBufferGeometry( 18, 8, 150, 64 );
 				//var geometry = new THREE.SphereBufferGeometry( 26, 64, 32 );
 				var material = new THREE.MeshStandardMaterial( {
 					color: 0xffffff,
@@ -135,9 +135,9 @@
 
 					} );
 
-				var ldrUrls = [ 'px.png', 'nx.png', 'py.png', 'ny.png', 'pz.png', 'nz.png' ];
+				var ldrUrls = [ 'posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg' ];
 				ldrCubeMap = new THREE.CubeTextureLoader()
-					.setPath( './textures/cube/pisa/' )
+					.setPath( './textures/cube/Bridge2/' )
 					.load( ldrUrls, function () {
 
 						ldrCubeMap.encoding = THREE.sRGBEncoding;

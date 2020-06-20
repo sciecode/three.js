@@ -39,7 +39,7 @@ import { Vector3 } from "../math/Vector3.js";
 import { WebGLRenderTarget } from "../renderers/WebGLRenderTarget.js";
 
 const LOD_MIN = 4;
-const LOD_MAX = 8;
+const LOD_MAX = 9;
 const SIZE_MAX = Math.pow( 2, LOD_MAX );
 
 // The standard deviations (radians) associated with the extra mips. These are
