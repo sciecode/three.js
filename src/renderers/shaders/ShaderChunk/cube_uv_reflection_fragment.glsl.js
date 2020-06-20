@@ -1,9 +1,9 @@
 export default /* glsl */`
 #ifdef ENVMAP_TYPE_CUBE_UV
 
-#define cubeUV_maxMipLevel 9.0
+#define cubeUV_maxMipLevel 8.0
 #define cubeUV_minMipLevel 4.0
-#define cubeUV_maxTileSize 512.0
+#define cubeUV_maxTileSize 256.0
 #define cubeUV_minTileSize 16.0
 
 // These shader functions convert between the UV coordinates of a single face of
@@ -50,9 +50,9 @@ vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
   float face = getFace(direction);
   float filterInt = max(cubeUV_minMipLevel - mipInt, 0.0);
   mipInt = max(mipInt, cubeUV_minMipLevel);
-  float faceSize = exp2(mipInt);
+  float faceSize = exp2(mipInt) * 2.0;
 
-  float texelSize = 1.0 / (3.0 * cubeUV_maxTileSize);
+  float texelSize = 1.0 / (3.0 * cubeUV_maxTileSize * 2.0);
 
   vec2 uv = getUV(direction, face) * (faceSize - 1.0);
   vec2 f = fract(uv);
@@ -63,10 +63,10 @@ vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
   }
   uv.x += face * faceSize;
   if(mipInt < cubeUV_maxMipLevel){
-    uv.y += 2.0 * cubeUV_maxTileSize;
+    uv.y += 2.0 * cubeUV_maxTileSize * 2.0;
   }
-  uv.y += filterInt * 2.0 * cubeUV_minTileSize;
-  uv.x += 3.0 * max(0.0, cubeUV_maxTileSize - 2.0 * faceSize);
+  uv.y += filterInt * 2.0 * cubeUV_minTileSize * 2.0;
+  uv.x += 3.0 * max(0.0, cubeUV_maxTileSize * 2.0 - 2.0 * faceSize);
   uv *= texelSize;
 
   vec3 tl = envMapTexelToLinear(texture2D(envMap, uv)).rgb;

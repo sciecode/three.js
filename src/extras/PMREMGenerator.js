@@ -39,8 +39,8 @@ import { Vector3 } from "../math/Vector3.js";
 import { WebGLRenderTarget } from "../renderers/WebGLRenderTarget.js";
 
 const LOD_MIN = 4;
-const LOD_MAX = 9;
-const SIZE_MAX = Math.pow( 2, LOD_MAX );
+const LOD_MAX = 8;
+const SIZE_MAX = Math.pow( 2, LOD_MAX ) * 2.0;
 
 // The standard deviations (radians) associated with the extra mips. These are
 // chosen to approximate a Trowbridge-Reitz distribution function times the
@@ -517,7 +517,7 @@ function _createPlanes() {
 
 	for ( let i = 0; i < TOTAL_LODS; i ++ ) {
 
-		const sizeLod = Math.pow( 2, lod );
+		const sizeLod = Math.pow( 2, lod ) * 2.0;
 		_sizeLods.push( sizeLod );
 		let sigma = 1.0 / sizeLod;
 
