@@ -52,7 +52,7 @@ const TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
 
 // The maximum length of the blur for loop. Smaller sigmas will use fewer
 // samples and exit early, but not recompile the shader.
-const MAX_SAMPLES = 20;
+const MAX_SAMPLES = 40;
 
 const ENCODINGS = {
 	[ LinearEncoding ]: 0,

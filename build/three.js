@@ -48213,7 +48213,7 @@
 
 	// The maximum length of the blur for loop. Smaller sigmas will use fewer
 	// samples and exit early, but not recompile the shader.
-	var MAX_SAMPLES = 20;
+	var MAX_SAMPLES = 40;
 
 	var ENCODINGS = {};
 	ENCODINGS[ LinearEncoding ] = 0;
