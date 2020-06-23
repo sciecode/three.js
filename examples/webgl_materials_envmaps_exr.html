@@ -81,6 +81,7 @@
 					.load( 'textures/piz_compressed.exr', function ( texture ) {
 
 						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
+
 						exrBackground = exrCubeRenderTarget.texture;
 
 						texture.dispose();

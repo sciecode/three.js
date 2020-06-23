@@ -22,7 +22,7 @@
 
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { OrbitControls } from './jsm/controls/OrbitControls.js';
-			import { HDRCubeTextureLoader } from './jsm/loaders/HDRCubeTextureLoader.js';
+			import { RGBELoader } from './jsm/loaders/RGBELoader.js';
 
 			var params = {
 				maxMipLevel: 9,
@@ -37,7 +37,7 @@
 			var camera, scene, renderer, controls;
 			var torusMesh, planeMesh;
 			var generatedCubeRenderTarget, ldrCubeRenderTarget, hdrCubeRenderTarget, rgbmCubeRenderTarget;
-			var ldrCubeMap, hdrCubeMap, rgbmCubeMap;
+			var ldrCubeMap, hdrCubeMap, rgbmCubeMap, hdrEquirect;
 
 			init();
 			animate();
@@ -84,21 +84,19 @@
 
 				};
 
-				var hdrUrls = [ 'px.hdr', 'nx.hdr', 'py.hdr', 'ny.hdr', 'pz.hdr', 'nz.hdr' ];
-				hdrCubeMap = new HDRCubeTextureLoader()
-					.setPath( './textures/cube/pisaHDR/' )
+				hdrEquirect = new RGBELoader()
 					.setDataType( THREE.UnsignedByteType )
-					.load( hdrUrls, function () {
+					.setPath( 'textures/equirectangular/' )
+					.load( 'ballroom_2k.hdr', function ( hdrEquirect ) {
 
-						hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
+						hdrCubeRenderTarget = pmremGenerator.fromEquirectangular( hdrEquirect );
 
-						hdrCubeMap.magFilter = THREE.LinearFilter;
-						hdrCubeMap.needsUpdate = true;
+						hdrCubeMap = hdrCubeRenderTarget.texture;
+						// hdrCubeMap.needsUpdate = true;
 
 					} );
 
 				var pmremGenerator = new THREE.PMREMGenerator( renderer );
-				// pmremGenerator.compileCubemapShader();
 
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -121,7 +119,8 @@
 				controller.onChange( function ( value ) {
 
 					pmremGenerator.setMaxMipLevel( Number( value ) );
-					hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
+					hdrCubeRenderTarget = pmremGenerator.fromEquirectangular( hdrEquirect );
+					hdrCubeMap = hdrCubeRenderTarget.texture;
 
 				} );
 				gui.add( params, 'roughness', 0, 1, 0.01 );
@@ -170,7 +169,6 @@
 
 				}
 
-				torusMesh.rotation.y += 0.005;
 				planeMesh.visible = params.debug;
 
 				scene.background = cubeMap;

@@ -382,13 +382,9 @@ PMREMGenerator.prototype = {
 		const autoClear = renderer.autoClear;
 		renderer.autoClear = false;
 
-		// console.log( _sigmas );
-
 		for ( let i = 1; i < TOTAL_LODS; i ++ ) {
 
 			const sigma = Math.sqrt( _sigmas[ i ] * _sigmas[ i ] - _sigmas[ i - 1 ] * _sigmas[ i - 1 ] );
-
-			console.log( _sizeLods[ i ], sigma );
 
 			const poleAxis = _axisDirections[ ( i - 1 ) % _axisDirections.length ];
 

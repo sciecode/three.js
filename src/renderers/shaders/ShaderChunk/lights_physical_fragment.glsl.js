@@ -5,7 +5,7 @@ material.diffuseColor = diffuseColor.rgb * ( 1.0 - metalnessFactor );
 vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );
 float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );
 
-material.specularRoughness = max( roughnessFactor, 0.0525 );// 0.0525 corresponds to the base mip of a 256 cubemap.
+material.specularRoughness = max( roughnessFactor, 0.0262 );// 0.0262 corresponds to the base mip of a 1024 cubemap.
 material.specularRoughness += geometryRoughness;
 material.specularRoughness = min( material.specularRoughness, 1.0 );
 

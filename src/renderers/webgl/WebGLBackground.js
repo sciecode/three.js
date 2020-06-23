@@ -74,6 +74,12 @@ function WebGLBackground( renderer, state, objects, premultipliedAlpha ) {
 					} )
 				);
 
+				if ( background.mapping === CubeUVReflectionMapping ) {
+
+					boxMesh.material.uniforms.maxMipLevel.value = background.maxMipLevel;
+
+				}
+
 				boxMesh.geometry.deleteAttribute( 'normal' );
 				boxMesh.geometry.deleteAttribute( 'uv' );
 
