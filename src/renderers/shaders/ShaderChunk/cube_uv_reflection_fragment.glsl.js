@@ -64,12 +64,6 @@ vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
   if(mipInt < float( maxMipLevel ) ){
     uv.y += 2.0 * cubeUV_maxTileSize;
 	}
-	if ( filterInt >= 4.0 ) {
-
-		filterInt -= 4.0;
-		uv.x += 3.0 * cubeUV_minTileSize;
-
-	}
   uv.y += filterInt * 2.0 * cubeUV_minTileSize;
   uv.x += 3.0 * max(0.0, cubeUV_maxTileSize - 2.0 * faceSize);
   uv *= texelSize;

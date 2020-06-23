@@ -508,16 +508,7 @@ PMREMGenerator.prototype = {
 
 		if ( lodOut > LOD_MAX - LOD_MIN ) {
 
-			if ( lodOut < LOD_MAX - LOD_MIN + 4 ) {
-
-				y += 2 * outputSize * ( lodOut - LOD_MAX + LOD_MIN );
-
-			} else {
-
-				y += 2 * outputSize * ( lodOut - 4 - LOD_MAX + LOD_MIN );
-				x += 3 * outputSize;
-
-			}
+			y += 2 * outputSize * ( lodOut - LOD_MAX + LOD_MIN );
 
 		}
 
