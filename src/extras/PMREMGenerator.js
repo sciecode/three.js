@@ -38,7 +38,7 @@ import { Vector2 } from "../math/Vector2.js";
 import { Vector3 } from "../math/Vector3.js";
 import { WebGLRenderTarget } from "../renderers/WebGLRenderTarget.js";
 
-const LOD_MIN = 4;
+const LOD_MIN = 3;
 let LOD_MAX = 9;
 let SIZE_MAX = Math.pow( 2, LOD_MAX );
 
@@ -46,7 +46,7 @@ let SIZE_MAX = Math.pow( 2, LOD_MAX );
 // chosen to approximate a Trowbridge-Reitz distribution function times the
 // geometric shadowing function. These sigma values squared must match the
 // variance #defines in cube_uv_reflection_fragment.glsl.js.
-const EXTRA_LOD_SIGMA = [ 0.125, 0.215, 0.35, 0.446, 0.526, 0.582 ];
+const EXTRA_LOD_SIGMA = [ 0.215, 0.35, 0.446, 0.526, 0.582 ];
 
 let TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
 

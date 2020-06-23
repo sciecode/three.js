@@ -1,8 +1,8 @@
 export default /* glsl */`
 #ifdef ENVMAP_TYPE_CUBE_UV
 
-#define cubeUV_minMipLevel 4.0
-#define cubeUV_minTileSize 16.0
+#define cubeUV_minMipLevel 3.0
+#define cubeUV_minTileSize 8.0
 
 // These shader functions convert between the UV coordinates of a single face of
 // a cubemap, the 0-5 integer index of a cube face, and the direction vector for
