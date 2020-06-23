@@ -39,8 +39,8 @@ import { Vector3 } from "../math/Vector3.js";
 import { WebGLRenderTarget } from "../renderers/WebGLRenderTarget.js";
 
 const LOD_MIN = 4;
-const LOD_MAX = 8;
-const SIZE_MAX = Math.pow( 2, LOD_MAX );
+let LOD_MAX = 9;
+let SIZE_MAX = Math.pow( 2, LOD_MAX );
 
 // The standard deviations (radians) associated with the extra mips. These are
 // chosen to approximate a Trowbridge-Reitz distribution function times the
@@ -48,7 +48,7 @@ const SIZE_MAX = Math.pow( 2, LOD_MAX );
 // variance #defines in cube_uv_reflection_fragment.glsl.js.
 const EXTRA_LOD_SIGMA = [ 0.125, 0.215, 0.35, 0.446, 0.526, 0.582 ];
 
-const TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
+let TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
 
 // The maximum length of the blur for loop. Smaller sigmas will use fewer
 // samples and exit early, but not recompile the shader.
@@ -65,7 +65,7 @@ const ENCODINGS = {
 };
 
 const _flatCamera = new OrthographicCamera();
-const { _lodPlanes, _sizeLods, _sigmas } = _createPlanes();
+let { _lodPlanes, _sizeLods, _sigmas } = _createPlanes();
 let _oldTarget = null;
 
 // Golden Ratio
@@ -181,6 +181,19 @@ PMREMGenerator.prototype = {
 
 	},
 
+	setMaxMipLevel: function ( level ) {
+
+		LOD_MAX = level;
+		SIZE_MAX = Math.pow( 2, LOD_MAX );
+		TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
+
+		let data = _createPlanes();
+		_lodPlanes = data._lodPlanes;
+		_sizeLods = data._sizeLods;
+		_sigmas = data._sigmas;
+
+	},
+
 	/**
 	 * Disposes of the PMREMGenerator's internal memory. Note that PMREMGenerator is a static class,
 	 * so you should not need more than one PMREMGenerator object. If you do, calling dispose() on
@@ -220,6 +233,8 @@ PMREMGenerator.prototype = {
 		this._textureToCubeUV( texture, cubeUVRenderTarget );
 		this._applyPMREM( cubeUVRenderTarget );
 		this._cleanup( cubeUVRenderTarget );
+
+		cubeUVRenderTarget.texture.maxMipLevel = LOD_MAX;
 
 		return cubeUVRenderTarget;
 
@@ -367,9 +382,13 @@ PMREMGenerator.prototype = {
 		const autoClear = renderer.autoClear;
 		renderer.autoClear = false;
 
+		// console.log( _sigmas );
+
 		for ( let i = 1; i < TOTAL_LODS; i ++ ) {
 
 			const sigma = Math.sqrt( _sigmas[ i ] * _sigmas[ i ] - _sigmas[ i - 1 ] * _sigmas[ i - 1 ] );
+
+			console.log( _sizeLods[ i ], sigma );
 
 			const poleAxis = _axisDirections[ ( i - 1 ) % _axisDirections.length ];
 
@@ -471,6 +490,7 @@ PMREMGenerator.prototype = {
 		}
 
 		blurUniforms[ 'envMap' ].value = targetIn.texture;
+		blurUniforms[ 'maxMipLevel' ].value = LOD_MAX;
 		blurUniforms[ 'samples' ].value = samples;
 		blurUniforms[ 'weights' ].value = weights;
 		blurUniforms[ 'latitudinal' ].value = direction === 'latitudinal';
@@ -487,8 +507,23 @@ PMREMGenerator.prototype = {
 		blurUniforms[ 'outputEncoding' ].value = ENCODINGS[ targetIn.texture.encoding ];
 
 		const outputSize = _sizeLods[ lodOut ];
-		const x = 3 * Math.max( 0, SIZE_MAX - 2 * outputSize );
-		const y = ( lodOut === 0 ? 0 : 2 * SIZE_MAX ) + 2 * outputSize * ( lodOut > LOD_MAX - LOD_MIN ? lodOut - LOD_MAX + LOD_MIN : 0 );
+		let x = 3 * Math.max( 0, SIZE_MAX - 2 * outputSize );
+		let y = ( lodOut === 0 ? 0 : 2 * SIZE_MAX );
+
+		if ( lodOut > LOD_MAX - LOD_MIN ) {
+
+			if ( lodOut < LOD_MAX - LOD_MIN + 4 ) {
+
+				y += 2 * outputSize * ( lodOut - LOD_MAX + LOD_MIN );
+
+			} else {
+
+				y += 2 * outputSize * ( lodOut - 4 - LOD_MAX + LOD_MIN );
+				x += 3 * outputSize;
+
+			}
+
+		}
 
 		_setViewport( targetOut, x, y, 3 * outputSize, 2 * outputSize );
 		renderer.setRenderTarget( targetOut );
@@ -613,6 +648,7 @@ function _getBlurShader( maxSamples ) {
 
 		uniforms: {
 			'envMap': { value: null },
+			'maxMipLevel': { value: LOD_MAX },
 			'samples': { value: 1 },
 			'weights': { value: weights },
 			'latitudinal': { value: false },
@@ -633,6 +669,7 @@ uniform sampler2D envMap;
 uniform int samples;
 uniform float weights[n];
 uniform bool latitudinal;
+uniform int maxMipLevel;
 uniform float dTheta;
 uniform float mipInt;
 uniform vec3 poleAxis;

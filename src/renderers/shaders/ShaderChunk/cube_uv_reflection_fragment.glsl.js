@@ -1,9 +1,7 @@
 export default /* glsl */`
 #ifdef ENVMAP_TYPE_CUBE_UV
 
-#define cubeUV_maxMipLevel 8.0
 #define cubeUV_minMipLevel 4.0
-#define cubeUV_maxTileSize 256.0
 #define cubeUV_minTileSize 16.0
 
 // These shader functions convert between the UV coordinates of a single face of
@@ -50,7 +48,8 @@ vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
   float face = getFace(direction);
   float filterInt = max(cubeUV_minMipLevel - mipInt, 0.0);
   mipInt = max(mipInt, cubeUV_minMipLevel);
-  float faceSize = exp2(mipInt);
+	float faceSize = exp2(mipInt);
+	float cubeUV_maxTileSize = exp2( float( maxMipLevel ) );
 
   float texelSize = 1.0 / (3.0 * cubeUV_maxTileSize);
 
@@ -62,9 +61,15 @@ vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
     face -= 3.0;
   }
   uv.x += face * faceSize;
-  if(mipInt < cubeUV_maxMipLevel){
+  if(mipInt < float( maxMipLevel ) ){
     uv.y += 2.0 * cubeUV_maxTileSize;
-  }
+	}
+	if ( filterInt >= 4.0 ) {
+
+		filterInt -= 4.0;
+		uv.x += 3.0 * cubeUV_minTileSize;
+
+	}
   uv.y += filterInt * 2.0 * cubeUV_minTileSize;
   uv.x += 3.0 * max(0.0, cubeUV_maxTileSize - 2.0 * faceSize);
   uv *= texelSize;
@@ -116,7 +121,7 @@ float roughnessToMip(float roughness) {
 }
 
 vec4 textureCubeUV(sampler2D envMap, vec3 sampleDir, float roughness) {
-  float mip = clamp(roughnessToMip(roughness), m0, cubeUV_maxMipLevel);
+  float mip = clamp(roughnessToMip(roughness), m0, float( maxMipLevel ) );
   float mipF = fract(mip);
   float mipInt = floor(mip);
 

@@ -2,7 +2,10 @@
  * @author mrdoob / http://mrdoob.com/
  */
 
-import { BackSide } from "../../constants.js";
+import {
+	CubeUVReflectionMapping,
+	BackSide
+} from "../../constants.js";
 
 function WebGLMaterials( properties ) {
 
@@ -155,6 +158,12 @@ function WebGLMaterials( properties ) {
 			uniforms.refractionRatio.value = material.refractionRatio;
 
 			uniforms.maxMipLevel.value = properties.get( envMap ).__maxMipLevel;
+
+			if ( envMap.mapping == CubeUVReflectionMapping ) {
+
+				uniforms.maxMipLevel.value = envMap.maxMipLevel;
+
+			}
 
 		}
 
