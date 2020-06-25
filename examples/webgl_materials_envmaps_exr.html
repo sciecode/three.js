@@ -37,6 +37,10 @@
 			var pngBackground, exrBackground;
 			var exporter;
 
+			var link = document.createElement( 'a' );
+			link.style.display = 'none';
+			document.body.appendChild( link );
+
 			init();
 			animate();
 
@@ -87,8 +91,7 @@
 						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
 						exrBackground = exrCubeRenderTarget.texture;
 
-						let buf = exporter.parse( renderer, exrCubeRenderTarget );
-						saveEXR( buf );
+						saveEXR( exporter.parse( renderer, exrCubeRenderTarget ) );
 
 						texture.dispose();
 
@@ -213,10 +216,6 @@
 				save( new Blob( [ buffer ], { type: 'text/plain' } ), 'test.exr' );
 
 			}
-
-			var link = document.createElement( 'a' );
-			link.style.display = 'none';
-			document.body.appendChild( link );
 
 		</script>
 

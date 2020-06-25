@@ -39,6 +39,10 @@
 			var generatedCubeRenderTarget, ldrCubeRenderTarget, hdrCubeRenderTarget, rgbmCubeRenderTarget;
 			var ldrCubeMap, hdrCubeMap, rgbmCubeMap, exporter;
 
+			var link = document.createElement( 'a' );
+			link.style.display = 'none';
+			document.body.appendChild( link );
+
 			init();
 			animate();
 
@@ -133,8 +137,6 @@
 
 						hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
 
-						saveEXR( exporter.parse( renderer, hdrCubeRenderTarget ) );
-
 						hdrCubeMap.magFilter = THREE.LinearFilter;
 						hdrCubeMap.needsUpdate = true;
 
@@ -172,6 +174,8 @@
 
 				var envScene = getEnvScene();
 				generatedCubeRenderTarget = pmremGenerator.fromScene( envScene, 0.04 );
+
+				saveEXR( exporter.parse( renderer, generatedCubeRenderTarget ) );
 
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -285,10 +289,6 @@
 				save( new Blob( [ buffer ], { type: 'text/plain' } ), 'test.exr' );
 
 			}
-
-			var link = document.createElement( 'a' );
-			link.style.display = 'none';
-			document.body.appendChild( link );
 
 		</script>
 
