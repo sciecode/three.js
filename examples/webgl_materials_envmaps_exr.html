@@ -20,6 +20,7 @@
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { OrbitControls } from './jsm/controls/OrbitControls.js';
 			import { EXRLoader } from './jsm/loaders/EXRLoader.js';
+			import { EXRExporter } from './jsm/exporters/EXRExporter.js';
 
 			var params = {
 				envMap: 'EXR',
@@ -34,6 +35,7 @@
 			var torusMesh, planeMesh;
 			var pngCubeRenderTarget, exrCubeRenderTarget;
 			var pngBackground, exrBackground;
+			var exporter;
 
 			init();
 			animate();
@@ -49,6 +51,8 @@
 				scene = new THREE.Scene();
 
 				renderer = new THREE.WebGLRenderer();
+
+				exporter = new EXRExporter();
 
 				//
 
@@ -82,6 +86,9 @@
 
 						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
 						exrBackground = exrCubeRenderTarget.texture;
+
+						let buf = exporter.parse( renderer, exrCubeRenderTarget );
+						saveEXR( buf );
 
 						texture.dispose();
 
@@ -192,6 +199,24 @@
 				renderer.render( scene, camera );
 
 			}
+
+			function save( blob, filename ) {
+
+				link.href = URL.createObjectURL( blob );
+				link.download = filename;
+				link.click();
+
+			}
+
+			function saveEXR( buffer ) {
+
+				save( new Blob( [ buffer ], { type: 'text/plain' } ), 'test.exr' );
+
+			}
+
+			var link = document.createElement( 'a' );
+			link.style.display = 'none';
+			document.body.appendChild( link );
 
 		</script>
 

@@ -24,6 +24,7 @@ import {
 	RGBEFormat,
 	RGBM16Encoding,
 	RGBM7Encoding,
+	FloatType,
 	UnsignedByteType,
 	sRGBEncoding
 } from "../constants.js";
@@ -230,9 +231,9 @@ PMREMGenerator.prototype = {
 			magFilter: NearestFilter,
 			minFilter: NearestFilter,
 			generateMipmaps: false,
-			type: UnsignedByteType,
+			type: FloatType,
 			format: RGBEFormat,
-			encoding: _isLDR( texture ) ? texture.encoding : RGBEEncoding,
+			encoding: _isLDR( texture ) ? texture.encoding : LinearEncoding,
 			depthBuffer: false,
 			stencilBuffer: false
 		};
@@ -655,7 +656,7 @@ void main() {
 	if (all(equal(axis, vec3(0.0))))
 		axis = vec3(vOutputDirection.z, 0.0, - vOutputDirection.x);
 	axis = normalize(axis);
-	gl_FragColor = vec4(0.0);
+	gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 	gl_FragColor.rgb += weights[0] * getSample(0.0, axis);
 	for (int i = 1; i < n; i++) {
 		if (i >= samples)
@@ -706,7 +707,7 @@ ${_getEncodings()}
 #include <common>
 
 void main() {
-	gl_FragColor = vec4(0.0);
+	gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 	vec3 outputDirection = normalize(vOutputDirection);
 	vec2 uv = equirectUv( outputDirection );
 	vec2 f = fract(uv / texelSize - 0.5);
@@ -758,7 +759,7 @@ uniform samplerCube envMap;
 ${_getEncodings()}
 
 void main() {
-	gl_FragColor = vec4(0.0);
+	gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 	gl_FragColor.rgb = envMapTexelToLinear(textureCube(envMap, vec3( - vOutputDirection.x, vOutputDirection.yz ))).rgb;
 	gl_FragColor = linearToOutputTexel(gl_FragColor);
 }

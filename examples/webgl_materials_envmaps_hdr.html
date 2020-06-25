@@ -23,6 +23,7 @@
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { OrbitControls } from './jsm/controls/OrbitControls.js';
 			import { HDRCubeTextureLoader } from './jsm/loaders/HDRCubeTextureLoader.js';
+			import { EXRExporter } from './jsm/exporters/EXRExporter.js';
 
 			var params = {
 				envMap: 'HDR',
@@ -36,7 +37,7 @@
 			var camera, scene, renderer, controls;
 			var torusMesh, planeMesh;
 			var generatedCubeRenderTarget, ldrCubeRenderTarget, hdrCubeRenderTarget, rgbmCubeRenderTarget;
-			var ldrCubeMap, hdrCubeMap, rgbmCubeMap;
+			var ldrCubeMap, hdrCubeMap, rgbmCubeMap, exporter;
 
 			init();
 			animate();
@@ -90,9 +91,11 @@
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x000000 );
 
-				renderer = new THREE.WebGLRenderer();
+				renderer = new THREE.WebGLRenderer( { alpha: true } );
 				renderer.physicallyCorrectLights = true;
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+				exporter = new EXRExporter();
 
 				//
 
@@ -129,6 +132,8 @@
 					.load( hdrUrls, function () {
 
 						hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
+
+						saveEXR( exporter.parse( renderer, hdrCubeRenderTarget ) );
 
 						hdrCubeMap.magFilter = THREE.LinearFilter;
 						hdrCubeMap.needsUpdate = true;
@@ -266,6 +271,24 @@
 				renderer.render( scene, camera );
 
 			}
+
+			function save( blob, filename ) {
+
+				link.href = URL.createObjectURL( blob );
+				link.download = filename;
+				link.click();
+
+			}
+
+			function saveEXR( buffer ) {
+
+				save( new Blob( [ buffer ], { type: 'text/plain' } ), 'test.exr' );
+
+			}
+
+			var link = document.createElement( 'a' );
+			link.style.display = 'none';
+			document.body.appendChild( link );
 
 		</script>
 
