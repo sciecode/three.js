@@ -46,7 +46,7 @@ THREE.EXRExporter.prototype = {
 			gamma: renderer.gammaFactor,
 			outType: ( this.type == THREE.HalfFloatType ) ? 1 : 2,
 			IN_CHANNELS: 4,
-			OUT_CHANNELS: ( ENCODING == THREE.RGBEEncoding ) ? 3 : 4
+			OUT_CHANNELS: ( ENCODING == THREE.RGBEEncoding ) ? 3 : 4,
 		};
 
 		let dataBuffer = getPixelData( renderer, renderTarget, info );
@@ -54,16 +54,16 @@ THREE.EXRExporter.prototype = {
 		let rawContentBuffer = new Float32Array( info.width * info.height * info.OUT_CHANNELS );
 		reorganizeDataBuffer( dataBuffer, rawContentBuffer, info );
 
-		// compress_data
+		const chunks = { data: new Array(), totalSize: 0 };
+		compressData( rawContentBuffer, chunks, info );
 
-		let headerSize = getHeaderSize( info );
-		let contentSize = rawContentBuffer.length * info.outType * 2 + renderTarget.height * 8;
+		let headerSize = getHeaderSize( info, chunks );
 
-		let outBuffer = new Uint8Array( headerSize + contentSize );
+		let outBuffer = new Uint8Array( headerSize + chunks.totalSize + info.height * 8 );
 
-		fillHeader( outBuffer, info );
+		fillHeader( outBuffer, chunks, info );
 
-		fillData( outBuffer, rawContentBuffer, headerSize, info );
+		fillData( outBuffer, chunks, headerSize, info );
 
 		return outBuffer;
 
@@ -192,6 +192,24 @@ function reorganizeVEC4( inBuffer, outBuffer, info ) {
 
 }
 
+function compressData( inBuffer, chunks, info ) {
+
+	let sum = 0;
+	const size = info.width * info.OUT_CHANNELS;
+
+	for ( let i = 0; i < info.height; ++ i ) {
+
+		let blockSize = size * info.outType * 2;
+		sum += blockSize;
+
+		chunks.data.push( { dataChunk: inBuffer.subarray( size * i, size * ( i + 1 ) ), size: blockSize } );
+
+	}
+
+	chunks.totalSize = sum;
+
+}
+
 function getHeaderSize( info ) {
 
 	const magic = 4;
@@ -215,7 +233,7 @@ function getHeaderSize( info ) {
 
 }
 
-function fillHeader( outBuffer, info ) {
+function fillHeader( outBuffer, chunks, info ) {
 
 	const offset = { value: 0 };
 	const dv = new DataView( outBuffer.buffer );
@@ -308,33 +326,32 @@ function fillHeader( outBuffer, info ) {
 
 	let SUM = offset.value + info.height * 8;
 
-	for ( let i = 0; i < info.height; ++ i ) {
+	for ( let i = 0; i < chunks.data.length; ++ i ) {
 
 		setUint64( dv, SUM, offset );
 
-		SUM += info.width * info.OUT_CHANNELS * info.outType * 2 + 8;
+		SUM += chunks.data[ i ].size + 8;
 
 	}
 
 }
 
-function fillData( outBuffer, rawBuffer, hs, info ) {
+function fillData( outBuffer, chunks, hs, info ) {
 
 	const dv = new DataView( outBuffer.buffer ),
 		offset = { value: hs },
-		dataOffset = { value: 0 },
-		size = info.width * info.OUT_CHANNELS,
 		setData = ( info.outType == 1 ) ? setFloat16 : setFloat32;
 
-	for ( let i = 0; i < info.height; ++ i ) {
+	for ( let i = 0; i < chunks.data.length; ++ i ) {
+
+		const data = chunks.data[ i ].dataChunk;
 
 		setUint32( dv, i, offset );
-		setUint32( dv, size * info.outType * 2, offset );
+		setUint32( dv, chunks.data[ i ].size, offset );
 
-		for ( let x = 0; x < size; ++ x ) {
+		for ( let j = 0; j < data.length; ++ j ) {
 
-			setData( dv, rawBuffer[ dataOffset.value ], offset );
-			dataOffset.value ++;
+			setData( dv, data[ j ], offset );
 
 		}
 
@@ -347,7 +364,7 @@ function encodeFloat16( val ) {
 
 	/* This method is faster than the OpenEXR implementation (very often
 	 * used, eg. in Ogre), with the additional benefit of rounding, inspired
-	 * by James Tursa?s half-precision code.
+	 * by James Tursa's half-precision code.
 	*/
 
 	tmpDataView.setFloat32( 0, val );
