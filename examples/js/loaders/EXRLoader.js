@@ -2138,6 +2138,8 @@ THREE.EXRLoader.prototype = Object.assign( Object.create( THREE.DataTextureLoade
 
 		var numBlocks = dataWindowHeight / scanlineBlockSize;
 
+		console.log( offset, EXRHeader );
+
 		for ( var i = 0; i < numBlocks; i ++ ) {
 
 			parseUlong( bufferDataView, offset ); // scanlineOffset
@@ -2219,6 +2221,8 @@ THREE.EXRLoader.prototype = Object.assign( Object.create( THREE.DataTextureLoade
 
 			line = parseUint32( bufferDataView, offset ); // line_no
 			size = parseUint32( bufferDataView, offset ); // data_len
+
+			if ( scanlineBlockIdx == 0 ) console.log( line, size );
 
 			compressionInfo.lines = ( line + scanlineBlockSize > height ) ? height - line : scanlineBlockSize;
 			compressionInfo.offset = offset;

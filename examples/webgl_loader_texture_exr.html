@@ -49,11 +49,11 @@
 
 				new EXRLoader()
 					.setDataType( THREE.FloatType )
-					.load( 'textures/test.exr', function ( texture, textureData ) {
+					.load( 'textures/test2.exr', function ( texture, textureData ) {
 
 						// memorial.exr is NPOT
 
-						//console.log( textureData );
+						console.log( textureData.header );
 						//console.log( texture );
 
 						// EXRLoader sets these default settings

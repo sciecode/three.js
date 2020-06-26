@@ -11,6 +11,7 @@ import {
 	UnsignedByteType,
 	sRGBEncoding
 } from "../../../build/three.module.js";
+import { Zlib } from "../libs/deflate.module.min.js";
 
 const textEncoder = new TextEncoder();
 const tmpDataView = new DataView( new ArrayBuffer( 8 ) );
@@ -18,6 +19,7 @@ const tmpDataView = new DataView( new ArrayBuffer( 8 ) );
 var EXRExporter = function () {
 
 	this.type = HalfFloatType;
+	this.compression = 3;
 
 };
 
@@ -46,6 +48,11 @@ EXRExporter.prototype = {
 		const FORMAT = renderTarget.texture.format;
 		const ENCODING = renderTarget.texture.encoding;
 
+		const compressionSizes = {
+			0: 1,
+			3: 16
+		};
+
 		const info = {
 			width: renderTarget.width,
 			height: renderTarget.height,
@@ -53,6 +60,8 @@ EXRExporter.prototype = {
 			format: FORMAT,
 			encoding: ENCODING,
 			gamma: renderer.gammaFactor,
+			compression: this.compression,
+			blockLines: compressionSizes[ this.compression ],
 			outType: ( this.type == HalfFloatType ) ? 1 : 2,
 			IN_CHANNELS: 4,
 			OUT_CHANNELS: ( ENCODING == RGBEEncoding ) ? 3 : 4,
@@ -60,7 +69,7 @@ EXRExporter.prototype = {
 
 		let dataBuffer = getPixelData( renderer, renderTarget, info );
 
-		let rawContentBuffer = new Float32Array( info.width * info.height * info.OUT_CHANNELS );
+		let rawContentBuffer = new Uint8Array( info.width * info.height * info.OUT_CHANNELS * 2.0 * info.outType );
 		reorganizeDataBuffer( dataBuffer, rawContentBuffer, info );
 
 		const chunks = { data: new Array(), totalSize: 0 };
@@ -68,7 +77,7 @@ EXRExporter.prototype = {
 
 		let headerSize = getHeaderSize( info, chunks );
 
-		let outBuffer = new Uint8Array( headerSize + chunks.totalSize + info.height * 8 );
+		let outBuffer = new Uint8Array( headerSize + chunks.totalSize + Math.ceil( info.height / info.blockLines ) * 8 );
 
 		fillHeader( outBuffer, chunks, info );
 
@@ -118,8 +127,16 @@ function reorganizeDataBuffer( inBuffer, outBuffer, info ) {
 
 function reorganizeVEC3( inBuffer, outBuffer, info ) {
 
+	const byteSize = 2 * info.outType,
+		w = info.width,
+		h = info.height,
+		dv = new DataView( outBuffer.buffer ),
+		dec = { r: 0, g: 0, b: 0 },
+		offset = { value: 0 },
+		getValue = ( info.type == FloatType ) ? getFloat32 : getUint8,
+		setValue = ( info.outType == 1 ) ? setFloat16 : setFloat32;
+
 	let decode;
-	const w = info.width, h = info.height, dec = { r: 0, g: 0, b: 0 };
 
 	switch ( info.encoding ) {
 
@@ -135,18 +152,23 @@ function reorganizeVEC3( inBuffer, outBuffer, info ) {
 
 			let i = y * w * 4 + x * 4;
 
-			const r = getUint8( inBuffer, i );
-			const g = getUint8( inBuffer, i + 1 );
-			const b = getUint8( inBuffer, i + 2 );
-			const a = getUint8( inBuffer, i + 3 );
+			const r = getValue( inBuffer, i );
+			const g = getValue( inBuffer, i + 1 );
+			const b = getValue( inBuffer, i + 2 );
+			const a = getValue( inBuffer, i + 3 );
+
+			const line = ( h - y - 1 ) * w * 3 * byteSize;
 
 			decode( dec, r, g, b, a );
 
-			const line = ( h - y - 1 ) * w * 3;
+			offset.value = line + x * byteSize;
+			setValue( dv, dec.b, offset );
 
-			outBuffer[ line + x ] = dec.b;
-			outBuffer[ line + w + x ] = dec.b;
-			outBuffer[ line + 2 * w + x ] = dec.b;
+			offset.value = line + w * byteSize + x * byteSize;
+			setValue( dv, dec.g, offset );
+
+			offset.value = line + 2 * w * byteSize + x * byteSize;
+			setValue( dv, dec.r, offset );
 
 		}
 
@@ -156,8 +178,16 @@ function reorganizeVEC3( inBuffer, outBuffer, info ) {
 
 function reorganizeVEC4( inBuffer, outBuffer, info ) {
 
-	let decode, getValue = ( info.type == FloatType ) ? getFloat32 : getUint8;
-	const w = info.width, h = info.height, dec = { r: 0, g: 0, b: 0, a: 0 };
+	const byteSize = 2 * info.outType,
+		w = info.width,
+		h = info.height,
+		dv = new DataView( outBuffer.buffer ),
+		dec = { r: 0, g: 0, b: 0, a: 0 },
+		offset = { value: 0 },
+		getValue = ( info.type == FloatType ) ? getFloat32 : getUint8,
+		setValue = ( info.outType == 1 ) ? setFloat16 : setFloat32;
+
+	let decode;
 
 	switch ( info.encoding ) {
 
@@ -186,14 +216,21 @@ function reorganizeVEC4( inBuffer, outBuffer, info ) {
 			const b = getValue( inBuffer, i + 2 );
 			const a = getValue( inBuffer, i + 3 );
 
-			const line = ( h - y - 1 ) * w * 4;
+			const line = ( h - y - 1 ) * w * 4 * byteSize;
 
 			decode( dec, r, g, b, a, info.gamma );
 
-			outBuffer[ line + x ] = dec.a;
-			outBuffer[ line + w + x ] = dec.b;
-			outBuffer[ line + 2 * w + x ] = dec.g;
-			outBuffer[ line + 3 * w + x ] = dec.r;
+			offset.value = line + x * byteSize;
+			setValue( dv, dec.a, offset );
+
+			offset.value = line + w * byteSize + x * byteSize;
+			setValue( dv, dec.b, offset );
+
+			offset.value = line + 2 * w * byteSize + x * byteSize;
+			setValue( dv, dec.g, offset );
+
+			offset.value = line + 3 * w * byteSize + x * byteSize;
+			setValue( dv, dec.r, offset );
 
 		}
 
@@ -203,19 +240,90 @@ function reorganizeVEC4( inBuffer, outBuffer, info ) {
 
 function compressData( inBuffer, chunks, info ) {
 
-	let sum = 0;
-	const size = info.width * info.OUT_CHANNELS;
+	let sum = 0, compress;
+	const size = info.width * info.OUT_CHANNELS * info.blockLines * 2 * info.outType;
 
-	for ( let i = 0; i < info.height; ++ i ) {
+	switch ( info.compression ) {
 
-		let blockSize = size * info.outType * 2;
-		sum += blockSize;
+		case 0:
+			compress = compressNONE;
+			break;
 
-		chunks.data.push( { dataChunk: inBuffer.subarray( size * i, size * ( i + 1 ) ), size: blockSize } );
+		case 3:
+			compress = compressZIP;
+			break;
+
+	}
+
+	for ( let i = 0; i < ( info.height / info.blockLines ); ++ i ) {
+
+		const arr = inBuffer.subarray( size * i, size * ( i + 1 ) );
+
+		const block = compress( arr );
+
+		sum += block.length;
+
+		chunks.data.push( { dataChunk: block, size: block.length } );
 
 	}
 
 	chunks.totalSize = sum;
+
+}
+
+function compressNONE( data ) {
+
+	return data;
+
+}
+
+function compressZIP( data ) {
+
+	//
+	// Reorder the pixel data.
+	//
+
+	const tmpBuffer = new Uint8Array( data.length );
+
+	let t1 = 0,
+		t2 = Math.floor( ( data.length + 1 ) / 2 ),
+		s = 0;
+
+	const stop = data.length - 1;
+
+	while ( true ) {
+
+		if ( s > stop ) break;
+		tmpBuffer[ t1 ++ ] = data[ s ++ ];
+
+		if ( s > stop ) break;
+		tmpBuffer[ t2 ++ ] = data[ s ++ ];
+
+	}
+
+	//
+	// Predictor.
+	//
+
+	let p = tmpBuffer[ 0 ];
+
+	for ( let t = 1; t < tmpBuffer.length; t ++ ) {
+
+		const d = tmpBuffer[ t ] - p + ( 128 + 256 );
+		p = tmpBuffer[ t ];
+		tmpBuffer[ t ] = d;
+
+	}
+
+	if ( typeof Zlib === 'undefined' ) {
+
+		console.error( 'THREE.EXRLoader: External library Deflate.min.js required, obtain or import from https://github.com/imaya/zlib.js' );
+
+	}
+
+	const deflate = new Zlib.Deflate( tmpBuffer ); // eslint-disable-line no-undef
+
+	return deflate.compress();
 
 }
 
@@ -236,7 +344,7 @@ function getHeaderSize( info ) {
 	const end = 1;
 
 	const HeaderSize = magic + mask + compression + screenWindowCenter + screenWindowWidth + pixelAspectRatio + lineOrder + dataWindow + displayWindow + channels + end;
-	const TableSize = info.height * 8;
+	const TableSize = Math.ceil( info.height / info.blockLines ) * 8;
 
 	return HeaderSize + TableSize;
 
@@ -255,7 +363,7 @@ function fillHeader( outBuffer, chunks, info ) {
 	setString( dv, 'compression', offset );
 	setString( dv, 'compression', offset );
 	setUint32( dv, 1, offset );
-	setUint8( dv, 0, offset );
+	setUint8( dv, info.compression, offset );
 
 	setString( dv, 'screenWindowCenter', offset );
 	setString( dv, 'v2f', offset );
@@ -296,7 +404,7 @@ function fillHeader( outBuffer, chunks, info ) {
 
 	setString( dv, 'channels', offset );
 	setString( dv, 'chlist', offset );
-	setUint32( dv, 55, offset );
+	setUint32( dv, info.OUT_CHANNELS * 18 + 1, offset );
 
 	if ( info.OUT_CHANNELS == 4 ) {
 
@@ -333,7 +441,7 @@ function fillHeader( outBuffer, chunks, info ) {
 
 	// = OFFSET TABLE =
 
-	let SUM = offset.value + info.height * 8;
+	let SUM = offset.value + Math.ceil( info.height / info.blockLines ) * 8;
 
 	for ( let i = 0; i < chunks.data.length; ++ i ) {
 
@@ -347,22 +455,19 @@ function fillHeader( outBuffer, chunks, info ) {
 
 function fillData( outBuffer, chunks, hs, info ) {
 
-	const dv = new DataView( outBuffer.buffer ),
-		offset = { value: hs },
-		setData = ( info.outType == 1 ) ? setFloat16 : setFloat32;
+	const offset = { value: hs },
+		dv = new DataView( outBuffer.buffer );
 
 	for ( let i = 0; i < chunks.data.length; ++ i ) {
 
 		const data = chunks.data[ i ].dataChunk;
+		const size = chunks.data[ i ].size;
 
-		setUint32( dv, i, offset );
-		setUint32( dv, chunks.data[ i ].size, offset );
+		setUint32( dv, i * info.blockLines, offset );
+		setUint32( dv, size, offset );
 
-		for ( let j = 0; j < data.length; ++ j ) {
-
-			setData( dv, data[ j ], offset );
-
-		}
+		outBuffer.set( data, offset.value );
+		offset.value += size;
 
 	}
 
@@ -377,7 +482,7 @@ function encodeFloat16( val ) {
 	*/
 
 	tmpDataView.setFloat32( 0, val );
-	const x = tmpDataView.getInt32( 0 ),
+	let x = tmpDataView.getInt32( 0 ),
 		m = ( x >> 12 ) & 0x07ff, /* Keep one extra bit for rounding */
 		e = ( x >> 23 ) & 0xff; /* Using int is faster here */
 

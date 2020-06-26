@@ -86,12 +86,14 @@
 
 				new EXRLoader()
 					.setDataType( THREE.UnsignedByteType )
-					.load( 'textures/piz_compressed.exr', function ( texture ) {
+					.load( 'textures/test.exr', function ( texture, texData ) {
+
+						console.log( texData.header );
 
 						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
 						exrBackground = exrCubeRenderTarget.texture;
 
-						saveEXR( exporter.parse( renderer, exrCubeRenderTarget ) );
+						// saveEXR( exporter.parse( renderer, exrCubeRenderTarget ) );
 
 						texture.dispose();
 

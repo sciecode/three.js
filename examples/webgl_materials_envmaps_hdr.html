@@ -137,6 +137,8 @@
 
 						hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
 
+						saveEXR( exporter.parse( renderer, hdrCubeRenderTarget ) );
+
 						hdrCubeMap.magFilter = THREE.LinearFilter;
 						hdrCubeMap.needsUpdate = true;
 
@@ -174,8 +176,6 @@
 
 				var envScene = getEnvScene();
 				generatedCubeRenderTarget = pmremGenerator.fromScene( envScene, 0.04 );
-
-				saveEXR( exporter.parse( renderer, generatedCubeRenderTarget ) );
 
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );

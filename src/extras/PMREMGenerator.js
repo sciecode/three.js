@@ -231,9 +231,9 @@ PMREMGenerator.prototype = {
 			magFilter: NearestFilter,
 			minFilter: NearestFilter,
 			generateMipmaps: false,
-			type: FloatType,
+			type: UnsignedByteType,
 			format: RGBEFormat,
-			encoding: _isLDR( texture ) ? texture.encoding : LinearEncoding,
+			encoding: _isLDR( texture ) ? texture.encoding : RGBEEncoding,
 			depthBuffer: false,
 			stencilBuffer: false
 		};
