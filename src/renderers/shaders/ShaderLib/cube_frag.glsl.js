@@ -1,4 +1,5 @@
 export default /* glsl */`
+#include <common>
 #include <envmap_common_pars_fragment>
 uniform float opacity;
 
