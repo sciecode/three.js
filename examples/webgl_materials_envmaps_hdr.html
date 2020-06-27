@@ -132,12 +132,18 @@
 				var hdrUrls = [ 'px.hdr', 'nx.hdr', 'py.hdr', 'ny.hdr', 'pz.hdr', 'nz.hdr' ];
 				hdrCubeMap = new HDRCubeTextureLoader()
 					.setPath( './textures/cube/pisaHDR/' )
-					.setDataType( THREE.UnsignedByteType )
+					.setDataType( THREE.FloatType )
 					.load( hdrUrls, function () {
 
 						hdrCubeRenderTarget = pmremGenerator.fromCubemap( hdrCubeMap );
 
-						saveEXR( exporter.parse( renderer, hdrCubeRenderTarget ) );
+						console.time( "export" );
+						saveEXR(
+							exporter
+								.setCompression( EXRExporter.ZIPS_COMPRESSION )
+								.parse( renderer, hdrCubeRenderTarget )
+						);
+						console.timeEnd( "export" );
 
 						hdrCubeMap.magFilter = THREE.LinearFilter;
 						hdrCubeMap.needsUpdate = true;

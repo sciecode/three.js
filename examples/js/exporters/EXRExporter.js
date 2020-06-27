@@ -8,8 +8,8 @@ const tmpDataView = new DataView( new ArrayBuffer( 8 ) );
 
 THREE.EXRExporter = function () {
 
-	this.type = THREE.HalfFloatType;
 	this.compression = 3;
+	this.type = THREE.HalfFloatType;
 
 };
 
@@ -20,6 +20,15 @@ THREE.EXRExporter.prototype = {
 	setDataType: function ( type ) {
 
 		this.type = type;
+
+		return this;
+
+	},
+
+	setCompression: function ( compression ) {
+
+		this.compression = compression;
+
 		return this;
 
 	},
@@ -34,40 +43,19 @@ THREE.EXRExporter.prototype = {
 
 		}
 
-		const TYPE = renderTarget.texture.type;
-		const FORMAT = renderTarget.texture.format;
-		const ENCODING = renderTarget.texture.encoding;
+		const info = buildInfo( this, renderer, renderTarget );
 
-		const compressionSizes = {
-			0: 1,
-			3: 16
-		};
+		const dataBuffer = getPixelData( renderer, renderTarget, info );
 
-		const info = {
-			width: renderTarget.width,
-			height: renderTarget.height,
-			type: TYPE,
-			format: FORMAT,
-			encoding: ENCODING,
-			gamma: renderer.gammaFactor,
-			compression: this.compression,
-			blockLines: compressionSizes[ this.compression ],
-			outType: ( this.type == THREE.HalfFloatType ) ? 1 : 2,
-			IN_CHANNELS: 4,
-			OUT_CHANNELS: ( ENCODING == THREE.RGBEEncoding ) ? 3 : 4,
-		};
-
-		let dataBuffer = getPixelData( renderer, renderTarget, info );
-
-		let rawContentBuffer = new Uint8Array( info.width * info.height * info.OUT_CHANNELS * 2.0 * info.outType );
+		const rawContentBuffer = new Uint8Array( info.width * info.height * info.numOutputChannels * info.dataSize );
 		reorganizeDataBuffer( dataBuffer, rawContentBuffer, info );
 
 		const chunks = { data: new Array(), totalSize: 0 };
 		compressData( rawContentBuffer, chunks, info );
 
-		let headerSize = getHeaderSize( info, chunks );
+		const headerSize = getHeaderSize( info, chunks );
 
-		let outBuffer = new Uint8Array( headerSize + chunks.totalSize + Math.ceil( info.height / info.blockLines ) * 8 );
+		const outBuffer = new Uint8Array( headerSize + chunks.totalSize + info.numBlocks * 8 );
 
 		fillHeader( outBuffer, chunks, info );
 
@@ -79,17 +67,54 @@ THREE.EXRExporter.prototype = {
 
 };
 
+function buildInfo( exporter, renderer, renderTarget ) {
+
+	const compressionSizes = {
+		0: 1,
+		2: 1,
+		3: 16
+	};
+
+	const WIDTH = renderTarget.width,
+		HEIGHT = renderTarget.height,
+		TYPE = renderTarget.texture.type,
+		FORMAT = renderTarget.texture.format,
+		ENCODING = renderTarget.texture.encoding,
+		GAMMA = renderer.gammaFactor,
+		COMPRESSION = exporter.compression,
+		OUT_TYPE = ( exporter.type == THREE.FloatType ) ? 2 : 1,
+		NUM_CHANNELS = ( ENCODING == THREE.RGBEEncoding ) ? 3 : 4,
+		COMPRESSION_SIZE = compressionSizes[ COMPRESSION ];
+
+	return {
+		width: WIDTH,
+		height: HEIGHT,
+		type: TYPE,
+		format: FORMAT,
+		encoding: ENCODING,
+		gamma: GAMMA,
+		compression: COMPRESSION,
+		blockLines: COMPRESSION_SIZE,
+		dataType: OUT_TYPE,
+		dataSize: 2 * OUT_TYPE,
+		numBlocks: Math.ceil( HEIGHT / COMPRESSION_SIZE ),
+		numInputChannels: 4,
+		numOutputChannels: NUM_CHANNELS,
+	};
+
+}
+
 function getPixelData( renderer, rtt, info ) {
 
 	let dataBuffer;
 
 	if ( info.type == THREE.FloatType ) {
 
-		dataBuffer = new Float32Array( info.width * info.height * info.IN_CHANNELS );
+		dataBuffer = new Float32Array( info.width * info.height * info.numInputChannels );
 
 	} else {
 
-		dataBuffer = new Uint8Array( info.width * info.height * info.IN_CHANNELS );
+		dataBuffer = new Uint8Array( info.width * info.height * info.numInputChannels );
 
 	}
 
@@ -101,34 +126,30 @@ function getPixelData( renderer, rtt, info ) {
 
 function reorganizeDataBuffer( inBuffer, outBuffer, info ) {
 
-	if ( info.OUT_CHANNELS == 3 ) {
-
-		reorganizeVEC3( inBuffer, outBuffer, info );
-
-	} else {
-
-		reorganizeVEC4( inBuffer, outBuffer, info );
-
-	}
-
-	return outBuffer;
-
-}
-
-function reorganizeVEC3( inBuffer, outBuffer, info ) {
-
-	const byteSize = 2 * info.outType,
-		w = info.width,
+	const w = info.width,
 		h = info.height,
 		dv = new DataView( outBuffer.buffer ),
-		dec = { r: 0, g: 0, b: 0 },
+		dec = { r: 0, g: 0, b: 0, a: 0 },
 		offset = { value: 0 },
+		cOffset = ( info.numOutputChannels == 4 ) ? 1 : 0,
 		getValue = ( info.type == THREE.FloatType ) ? getFloat32 : getUint8,
-		setValue = ( info.outType == 1 ) ? setFloat16 : setFloat32;
+		setValue = ( info.dataType == 1 ) ? setFloat16 : setFloat32;
 
 	let decode;
 
 	switch ( info.encoding ) {
+
+		case THREE.LinearEncoding:
+			decode = decodeLinear;
+			break;
+
+		case THREE.sRGBEncoding:
+			decode = decodeSRGB;
+			break;
+
+		case THREE.GammaEncoding:
+			decode = decodeGamma;
+			break;
 
 		case THREE.RGBEEncoding:
 			decode = decodeRGBE;
@@ -147,79 +168,24 @@ function reorganizeVEC3( inBuffer, outBuffer, info ) {
 			const b = getValue( inBuffer, i + 2 );
 			const a = getValue( inBuffer, i + 3 );
 
-			const line = ( h - y - 1 ) * w * 3 * byteSize;
-
-			decode( dec, r, g, b, a );
-
-			offset.value = line + x * byteSize;
-			setValue( dv, dec.b, offset );
-
-			offset.value = line + w * byteSize + x * byteSize;
-			setValue( dv, dec.g, offset );
-
-			offset.value = line + 2 * w * byteSize + x * byteSize;
-			setValue( dv, dec.r, offset );
-
-		}
-
-	}
-
-}
-
-function reorganizeVEC4( inBuffer, outBuffer, info ) {
-
-	const byteSize = 2 * info.outType,
-		w = info.width,
-		h = info.height,
-		dv = new DataView( outBuffer.buffer ),
-		dec = { r: 0, g: 0, b: 0, a: 0 },
-		offset = { value: 0 },
-		getValue = ( info.type == THREE.FloatType ) ? getFloat32 : getUint8,
-		setValue = ( info.outType == 1 ) ? setFloat16 : setFloat32;
-
-	let decode;
-
-	switch ( info.encoding ) {
-
-		case THREE.LinearEncoding:
-			decode = decodeLinear;
-			break;
-
-		case THREE.sRGBEncoding:
-			decode = decodeSRGB;
-			break;
-
-		case THREE.GammaEncoding:
-			decode = decodeGamma;
-			break;
-
-	}
-
-	for ( let y = 0; y < h; ++ y ) {
-
-		for ( let x = 0; x < w; ++ x ) {
-
-			let i = y * w * 4 + x * 4;
-
-			const r = getValue( inBuffer, i );
-			const g = getValue( inBuffer, i + 1 );
-			const b = getValue( inBuffer, i + 2 );
-			const a = getValue( inBuffer, i + 3 );
-
-			const line = ( h - y - 1 ) * w * 4 * byteSize;
+			const line = ( h - y - 1 ) * w * ( 3 + cOffset ) * info.dataSize;
 
 			decode( dec, r, g, b, a, info.gamma );
 
-			offset.value = line + x * byteSize;
-			setValue( dv, dec.a, offset );
+			if ( info.numOutputChannels == 4 ) {
 
-			offset.value = line + w * byteSize + x * byteSize;
+				offset.value = line + x * info.dataSize;
+				setValue( dv, dec.a, offset );
+
+			}
+
+			offset.value = line + ( cOffset ) * w * info.dataSize + x * info.dataSize;
 			setValue( dv, dec.b, offset );
 
-			offset.value = line + 2 * w * byteSize + x * byteSize;
+			offset.value = line + ( 1 + cOffset ) * w * info.dataSize + x * info.dataSize;
 			setValue( dv, dec.g, offset );
 
-			offset.value = line + 3 * w * byteSize + x * byteSize;
+			offset.value = line + ( 2 + cOffset ) * w * info.dataSize + x * info.dataSize;
 			setValue( dv, dec.r, offset );
 
 		}
@@ -230,8 +196,8 @@ function reorganizeVEC4( inBuffer, outBuffer, info ) {
 
 function compressData( inBuffer, chunks, info ) {
 
-	let sum = 0, compress;
-	const size = info.width * info.OUT_CHANNELS * info.blockLines * 2 * info.outType;
+	let sum = 0, compress, tmpBuffer;
+	const size = info.width * info.numOutputChannels * info.blockLines * info.dataSize;
 
 	switch ( info.compression ) {
 
@@ -239,17 +205,24 @@ function compressData( inBuffer, chunks, info ) {
 			compress = compressNONE;
 			break;
 
+		case 2:
 		case 3:
 			compress = compressZIP;
 			break;
 
 	}
 
-	for ( let i = 0; i < ( info.height / info.blockLines ); ++ i ) {
+	if ( info.compression != 0 ) {
+
+		tmpBuffer = new Uint8Array( size );
+
+	}
+
+	for ( let i = 0; i < info.numBlocks; ++ i ) {
 
 		const arr = inBuffer.subarray( size * i, size * ( i + 1 ) );
 
-		const block = compress( arr );
+		const block = compress( arr, tmpBuffer );
 
 		sum += block.length;
 
@@ -267,13 +240,11 @@ function compressNONE( data ) {
 
 }
 
-function compressZIP( data ) {
+function compressZIP( data, tmpBuffer ) {
 
 	//
 	// Reorder the pixel data.
 	//
-
-	const tmpBuffer = new Uint8Array( data.length );
 
 	let t1 = 0,
 		t2 = Math.floor( ( data.length + 1 ) / 2 ),
@@ -319,22 +290,20 @@ function compressZIP( data ) {
 
 function getHeaderSize( info ) {
 
-	const magic = 4;
-	const mask = 4;
+	// const magic = 4;
+	// const mask = 4;
+	// const compression = 12 + 12 + 4 + 1; // str name | compression type | i32 size | i8 content [ 0 ]
+	// const screenWindowCenter = 19 + 4 + 4 + 8; // str name | v2f type | i32 size | 2 * i32 content [0, 0]
+	// const screenWindowWidth = 18 + 6 + 4 + 4; // str name | float type | i32 size | i32 content [ 1 ]
+	// const pixelAspectRatio = 17 + 6 + 4 + 4; // str name | float type | i32 size | i32 content [ 1 ]
+	// const lineOrder = 10 + 10 + 4 + 1; // str name | lineOrder type | i32 size | i8 content [ 0 ]
+	// const dataWindow = 11 + 6 + 4 + 16; // str name | box2i type | i32 size | 4 * i32 content [0, 0, w, h]
+	// const displayWindow = 14 + 6 + 4 + 16; // str name | box2i type | i32 size | 4 * i32 content [0, 0, w, h]
+	// const channels = 9 + 7 + 4 + 1; // str name | chlist type | i32 size | chlist content
+	// const end = 1;
 
-	const compression = 12 + 12 + 4 + 1; // str name | str type | i32 size | i8 content [ 0 ]
-	const screenWindowCenter = 19 + 4 + 4 + 8; // str name | v2f type | i32 size | 2 * i32 content [0, 0]
-	const screenWindowWidth = 18 + 6 + 4 + 4; // str name | float type | i32 size | i32 content [ 1 ]
-	const pixelAspectRatio = 17 + 6 + 4 + 4; // str name | float type | i32 size | i32 content [ 1 ]
-	const lineOrder = 10 + 10 + 4 + 1; // str name | lineOrder type | i32 size | i8 content [ 0 ]
-	const dataWindow = 11 + 6 + 4 + 16; // str name | box2i type | i32 size | 4 * i32 content [0, 0, w, h]
-	const displayWindow = 14 + 6 + 4 + 16; // str name | box2i type | i32 size | 4 * i32 content [0, 0, w, h]
-	const channels = 9 + 7 + 4 + ( 18 * info.OUT_CHANNELS ) + 1; // str name | chlist type | i32 size | chlist content
-
-	const end = 1;
-
-	const HeaderSize = magic + mask + compression + screenWindowCenter + screenWindowWidth + pixelAspectRatio + lineOrder + dataWindow + displayWindow + channels + end;
-	const TableSize = Math.ceil( info.height / info.blockLines ) * 8;
+	const HeaderSize = 259 + ( 18 * info.numOutputChannels );
+	const TableSize = info.numBlocks * 8;
 
 	return HeaderSize + TableSize;
 
@@ -394,12 +363,12 @@ function fillHeader( outBuffer, chunks, info ) {
 
 	setString( dv, 'channels', offset );
 	setString( dv, 'chlist', offset );
-	setUint32( dv, info.OUT_CHANNELS * 18 + 1, offset );
+	setUint32( dv, info.numOutputChannels * 18 + 1, offset );
 
-	if ( info.OUT_CHANNELS == 4 ) {
+	if ( info.numOutputChannels == 4 ) {
 
 		setString( dv, 'A', offset );
-		setUint32( dv, info.outType, offset );
+		setUint32( dv, info.dataType, offset );
 		offset.value += 4;
 		setUint32( dv, 1, offset );
 		setUint32( dv, 1, offset );
@@ -407,19 +376,19 @@ function fillHeader( outBuffer, chunks, info ) {
 	}
 
 	setString( dv, 'B', offset );
-	setUint32( dv, info.outType, offset );
+	setUint32( dv, info.dataType, offset );
 	offset.value += 4;
 	setUint32( dv, 1, offset );
 	setUint32( dv, 1, offset );
 
 	setString( dv, 'G', offset );
-	setUint32( dv, info.outType, offset );
+	setUint32( dv, info.dataType, offset );
 	offset.value += 4;
 	setUint32( dv, 1, offset );
 	setUint32( dv, 1, offset );
 
 	setString( dv, 'R', offset );
-	setUint32( dv, info.outType, offset );
+	setUint32( dv, info.dataType, offset );
 	offset.value += 4;
 	setUint32( dv, 1, offset );
 	setUint32( dv, 1, offset );
@@ -431,7 +400,7 @@ function fillHeader( outBuffer, chunks, info ) {
 
 	// = OFFSET TABLE =
 
-	let SUM = offset.value + Math.ceil( info.height / info.blockLines ) * 8;
+	let SUM = offset.value + info.numBlocks * 8;
 
 	for ( let i = 0; i < chunks.data.length; ++ i ) {
 
@@ -611,3 +580,7 @@ function decodeRGBE( dec, r, g, b, a ) {
 	dec.b = b * exp;
 
 }
+
+THREE.EXRExporter.NO_COMPRESSION = 0;
+THREE.EXRExporter.ZIPS_COMPRESSION = 2;
+THREE.EXRExporter.ZIP_COMPRESSION = 3;

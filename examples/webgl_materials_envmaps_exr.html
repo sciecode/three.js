@@ -86,11 +86,11 @@
 
 				new EXRLoader()
 					.setDataType( THREE.UnsignedByteType )
-					.load( 'textures/test.exr', function ( texture, texData ) {
+					.load( 'textures/test.exr', function ( texture ) {
 
-						console.log( texData.header );
+						texture.mapping = THREE.CubeUVReflectionMapping;
 
-						exrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture );
+						exrCubeRenderTarget = { texture: texture };
 						exrBackground = exrCubeRenderTarget.texture;
 
 						// saveEXR( exporter.parse( renderer, exrCubeRenderTarget ) );
