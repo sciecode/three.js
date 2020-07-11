@@ -22,188 +22,295 @@
 
 		<script type="module">
 
-			import * as THREE from '../build/three.module.js';
+			// Simple three.js example
 
-			import Stats from './jsm/libs/stats.module.js';
+			import * as THREE from "../build/three.module.js";
+			import { OrbitControls } from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
 
-			var container, stats;
+			var mesh, renderer, scene, camera, controls, geometry;
+			var curT, prevT, curP, prevP, pos, sphere;
 
-			var camera, scene, renderer;
+			const dt = 0.0016;
+			const PI2 = Math.PI / 2;
+			const l = 5;
 
-			var mouseX = 0, mouseY = 0;
+			const pmouse =  new THREE.Vector3();
+			const mouse = new THREE.Vector3();
+			const F = new THREE.Vector3();
+			/* const tmp = new THREE.Vector3(); */
 
-			var windowHalfX = window.innerWidth / 2;
-			var windowHalfY = window.innerHeight / 2;
+			const Fdamp = new THREE.Vector3();
+			const Tdamp = new THREE.Vector3();
 
-			init();
-			animate();
+			const p = new THREE.Vector3();
+			const w = new THREE.Vector3();
 
-			function init() {
+			const tp = new THREE.Vector3();
+			const tw = new THREE.Vector3();
+			const tr = new THREE.Vector3();
 
-				container = document.getElementById( 'container' );
+			const v1 = new THREE.Vector3();
+			const a1 = new THREE.Vector3();
+			const v2 = new THREE.Vector3();
+			const a2 = new THREE.Vector3();
+			const v3 = new THREE.Vector3();
+			const a3 = new THREE.Vector3();
+			const v4 = new THREE.Vector3();
+			const a4 = new THREE.Vector3();
 
-				camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.z = 1800;
+			const qt = new THREE.Quaternion();
+			const m4 = new THREE.Matrix4();
+			const m3 = new THREE.Matrix3();
 
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0xffffff );
+			let dr;
 
-				var light = new THREE.DirectionalLight( 0xffffff );
-				light.position.set( 0, 0, 1 );
-				scene.add( light );
+			let vs = `
 
-				// shadow
+				attribute float displacement;
 
-				var canvas = document.createElement( 'canvas' );
-				canvas.width = 128;
-				canvas.height = 128;
+				uniform sampler2D tpos;
 
-				var context = canvas.getContext( '2d' );
-				var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
-				gradient.addColorStop( 0.1, 'rgba(210,210,210,1)' );
-				gradient.addColorStop( 1, 'rgba(255,255,255,1)' );
+				vec4 getQuaternion( vec3 to ) {
 
-				context.fillStyle = gradient;
-				context.fillRect( 0, 0, canvas.width, canvas.height );
+					vec4 q;
+					vec3 from = vec3( 0.0, 1.0, 0.0 );
 
-				var shadowTexture = new THREE.CanvasTexture( canvas );
+					q.xyz = cross( from, to );
+					q.w = dot( from, to ) + 1.0;
 
-				var shadowMaterial = new THREE.MeshBasicMaterial( { map: shadowTexture } );
-				var shadowGeo = new THREE.PlaneBufferGeometry( 300, 300, 1, 1 );
-
-				var shadowMesh;
-
-				shadowMesh = new THREE.Mesh( shadowGeo, shadowMaterial );
-				shadowMesh.position.y = - 250;
-				shadowMesh.rotation.x = - Math.PI / 2;
-				scene.add( shadowMesh );
-
-				shadowMesh = new THREE.Mesh( shadowGeo, shadowMaterial );
-				shadowMesh.position.y = - 250;
-				shadowMesh.position.x = - 400;
-				shadowMesh.rotation.x = - Math.PI / 2;
-				scene.add( shadowMesh );
-
-				shadowMesh = new THREE.Mesh( shadowGeo, shadowMaterial );
-				shadowMesh.position.y = - 250;
-				shadowMesh.position.x = 400;
-				shadowMesh.rotation.x = - Math.PI / 2;
-				scene.add( shadowMesh );
-
-				var radius = 200;
-
-				var geometry1 = new THREE.IcosahedronBufferGeometry( radius, 1 );
-
-				var count = geometry1.attributes.position.count;
-				geometry1.setAttribute( 'color', new THREE.BufferAttribute( new Float32Array( count * 3 ), 3 ) );
-
-				var geometry2 = geometry1.clone();
-				var geometry3 = geometry1.clone();
-
-				var color = new THREE.Color();
-				var positions1 = geometry1.attributes.position;
-				var positions2 = geometry2.attributes.position;
-				var positions3 = geometry3.attributes.position;
-				var colors1 = geometry1.attributes.color;
-				var colors2 = geometry2.attributes.color;
-				var colors3 = geometry3.attributes.color;
-
-				for ( var i = 0; i < count; i ++ ) {
-
-					color.setHSL( ( positions1.getY( i ) / radius + 1 ) / 2, 1.0, 0.5 );
-					colors1.setXYZ( i, color.r, color.g, color.b );
-
-					color.setHSL( 0, ( positions2.getY( i ) / radius + 1 ) / 2, 0.5 );
-					colors2.setXYZ( i, color.r, color.g, color.b );
-
-					color.setRGB( 1, 0.8 - ( positions3.getY( i ) / radius + 1 ) / 2, 0 );
-					colors3.setXYZ( i, color.r, color.g, color.b );
+					return normalize( q );
 
 				}
 
-				var material = new THREE.MeshPhongMaterial( {
-					color: 0xffffff,
-					flatShading: true,
-					vertexColors: true,
-					shininess: 0
+				void main() {
+
+					vec3 pos;
+
+					if ( displacement > 0.5 ) {
+
+						vec3 to = texture2D( tpos, vec2( 0.5, 0.5 ) ).xyz;
+						vec4 q = getQuaternion( to );
+						pos = position + 2.0 * cross( q.xyz, cross( q.xyz, position ) + q.w * position );
+
+					} else {
+
+						pos = position;
+
+					}
+
+					gl_Position = projectionMatrix * viewMatrix * vec4( pos, 1.0 );
+
+				}
+
+			`
+
+			let fs = `
+
+				void main() {
+
+					gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0 );
+
+				}
+
+			`
+
+			let copy_vert = `
+				precision highp float;
+				attribute vec2 position;
+				void main() {
+					gl_Position = vec4( position, vec2(1.0) );
+				}
+			`;
+
+			let copy_frag = `
+				precision highp float;
+				uniform vec2 resolution;
+				uniform sampler2D texture;
+				void main() {
+					vec2 uv = gl_FragCoord.xy / resolution.xy;
+					gl_FragColor = texture2D( texture, uv );
+				}
+			`;
+
+			function init() {
+
+				// renderer
+				renderer = new THREE.WebGL1Renderer( { antialias: true } );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				document.body.appendChild( renderer.domElement );
+
+				// scene
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x9c9c9c );
+
+				// camera
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.set( 0, 10, 20 );
+				camera.lookAt( new THREE.Vector3() );
+
+				// lights
+				const al = new THREE.AmbientLight( 0xffffff, 0.4 );
+				scene.add( al );
+
+				const dl = new THREE.DirectionalLight( 0xf4c3a2, 0.5 );
+				dl.position.set( 50, 100, 10 );
+				scene.add( dl );
+
+				pos = new Float32Array( 6 );
+				var disp = new Float32Array( 2 );
+
+				disp[ 1 ] = 1;
+
+				pos[ 0 ] = 0.0;
+				pos[ 1 ] = 0.0;
+				pos[ 2 ] = 0.0;
+				pos[ 3 ] = 0.0;
+				pos[ 4 ] = 5.0;
+				pos[ 5 ] = 0.0;
+
+				geometry = new THREE.BufferGeometry();
+				geometry.setAttribute( 'position', new THREE.BufferAttribute( pos, 3 ) );
+				geometry.setAttribute( 'displacement', new THREE.BufferAttribute( disp, 1 ) );
+
+
+				// copy
+
+				var data = new Float32Array( 4 );
+				data[ 0 ] = Math.sqrt( 3 ) / 2;
+				data[ 1 ] = 1 / 2;
+				dr = new THREE.DataTexture( data, 1, 1, THREE.RGBAFormat, THREE.FloatType );
+				const rtt = new THREE.WebGLRenderTarget( 1, 1, { format: THREE.RGBAFormat, type: THREE.FloatType } );
+
+				var copyShader = new THREE.RawShaderMaterial( {
+					uniforms: {
+						resolution: { type: 'v2', value: new THREE.Vector2( 1, 1 ) },
+						texture: { type: 't' },
+						fog: false,
+						lights: false,
+						depthWrite: false,
+						depthTest: false
+					},
+					vertexShader: copy_vert,
+					fragmentShader: copy_frag,
 				} );
 
-				var wireframeMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: true, transparent: true } );
+				const geo = new THREE.BufferGeometry();
+				const vertices = new Float32Array( [
+					-1.0, -1.0,
+					3.0, -1.0,
+					-1.0, 3.0
+				] );
 
-				var mesh = new THREE.Mesh( geometry1, material );
-				var wireframe = new THREE.Mesh( geometry1, wireframeMaterial );
-				mesh.add( wireframe );
-				mesh.position.x = - 400;
-				mesh.rotation.x = - 1.87;
-				scene.add( mesh );
+				geo.setAttribute( 'position', new THREE.BufferAttribute(vertices, 2) );
 
-				var mesh = new THREE.Mesh( geometry2, material );
-				var wireframe = new THREE.Mesh( geometry2, wireframeMaterial );
-				mesh.add( wireframe );
-				mesh.position.x = 400;
-				scene.add( mesh );
+				mesh = new THREE.Mesh( geo, copyShader );
+				mesh.frustumCulled = false;
+				copyShader.uniforms.texture.value = dr;
+				renderer.setRenderTarget( rtt );
+				renderer.render( mesh, new THREE.Camera() );
+				renderer.setRenderTarget( null );
 
-				var mesh = new THREE.Mesh( geometry3, material );
-				var wireframe = new THREE.Mesh( geometry3, wireframeMaterial );
-				mesh.add( wireframe );
-				scene.add( mesh );
+				// end copy
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
+				var material = new THREE.ShaderMaterial( {
+					uniforms: {
+						tpos: { value: rtt.texture }
+					},
+					vertexShader: vs,
+					fragmentShader: fs
+				} );
 
-				stats = new Stats();
-				container.appendChild( stats.dom );
+				var line = new THREE.LineSegments( geometry, material );
+				scene.add( line );
 
-				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-
-				//
-
-				window.addEventListener( 'resize', onWindowResize, false );
+				window.addEventListener( 'mousemove', onMouseMove );
+				renderer.domElement.addEventListener( 'mouseenter', onMouseEnter );
 
 			}
 
-			function onWindowResize() {
+			function onMouseMove( e ) {
 
-				windowHalfX = window.innerWidth / 2;
-				windowHalfY = window.innerHeight / 2;
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
+				pmouse.copy( mouse );
+				mouse.set( e.clientX, 0, e.clientY );
 
 			}
 
-			function onDocumentMouseMove( event ) {
+			function onMouseEnter( e ) {
 
-				mouseX = ( event.clientX - windowHalfX );
-				mouseY = ( event.clientY - windowHalfY );
+				mouse.set( e.clientX, 0, e.clientY );
+				pmouse.copy( mouse );
 
 			}
 
-			//
+			function G( q, av, v, w_d ) {
+
+				Tdamp.copy( av ).multiplyScalar( - 30 ); // viscous damping torque
+
+				tr.crossVectors( q, F ).multiplyScalar( l * 20 ); // external torque
+
+				w_d.crossVectors( q, camera.up ).multiplyScalar( 3000 ).add( tr ).add( Tdamp ); // angular acceleration
+
+				v.crossVectors( av, q ); // velocity
+
+			}
+
+			// integration step Runge-Kutta 4th order
+			function RK4() {
+
+				F.subVectors( mouse, pmouse );
+				pmouse.copy( mouse );
+
+				G( p, w, v1, a1 );
+				tp.copy( p ).addScaledVector( v1, 0.5 * dt );
+				tw.copy( w ).addScaledVector( a1, 0.5 * dt );
+				G( tp, tw, v2, a2 );
+				tp.copy( p ).addScaledVector( v2, 0.5 * dt );
+				tw.copy( w ).addScaledVector( a2, 0.5 * dt );
+				G( tp, tw, v3, a3 );
+				tp.copy( p ).addScaledVector( v3, dt );
+				tw.copy( w ).addScaledVector( a3, dt );
+				G( tp, tw, v4, a4 );
+
+				tp.set( 0, 0, 0 );
+				tp.add( v1 );
+				tp.addScaledVector( v2, 2 );
+				tp.addScaledVector( v3, 2 );
+				tp.add( v4 );
+				tp.multiplyScalar( dt / 6 );
+				p.add( tp );
+
+				tw.set( 0, 0, 0 );
+				tw.add( a1 );
+				tw.addScaledVector( a2, 2 );
+				tw.addScaledVector( a3, 2 );
+				tw.add( a4 );
+				tw.multiplyScalar( dt / 6 );
+				w.add( tw );
+
+			}
+
+			function updateParticles() {
+
+				RK4();
+
+				setPos();
+
+			}
 
 			function animate() {
 
-				requestAnimationFrame( animate );
+				// const raf = requestAnimationFrame( animate );
 
-				render();
-				stats.update();
-
-			}
-
-			function render() {
-
-				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
-				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
-
-				camera.lookAt( scene.position );
+				// updateParticles();
 
 				renderer.render( scene, camera );
 
 			}
+
+			init();
+			animate();
+
 
 		</script>
 
