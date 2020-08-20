@@ -313,7 +313,6 @@ function getHeaderSize( info ) {
 	// const end = 1;
 
 	const HeaderSize = 259 + ( 18 * info.numOutputChannels );
-	console.log( HeaderSize );
 
 	const TableSize = info.numBlocks * 8;
 
