@@ -2013,7 +2013,7 @@ class EXRLoader extends DataTextureLoader {
 
 			EXRHeader.version = dataView.getUint8( 4 );
 
-			const spec = dataView.getUint8( 5 ); // fullMask
+			let spec = dataView.getUint8( 5 ); // fullMask
 
 			EXRHeader.spec = {
 				singleTile: !! ( spec & 2 ),
@@ -2056,7 +2056,7 @@ class EXRLoader extends DataTextureLoader {
 
 			}
 
-			if ( spec != 0 ) {
+			if ( ( spec & ~0x04 ) != 0 ) { // unsupported tiled, deep-image, multi-part
 
 				console.error( 'EXRHeader:', EXRHeader );
 				throw new Error( 'THREE.EXRLoader: provided file is currently unsupported.' );
