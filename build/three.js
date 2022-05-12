@@ -19230,10 +19230,9 @@
 		this.toneMapping = NoToneMapping;
 		this.toneMappingExposure = 1.0; //
 
-		Object.defineProperties(WebGLRenderer.prototype, {
+		Object.defineProperties(this, {
 			// @deprecated since r136, 0e21088102b4de7e0a0a33140620b7a3424b9e6d
 			gammaFactor: {
-				configurable: true,
 				get: function () {
 					console.warn('THREE.WebGLRenderer: .gammaFactor has been removed.');
 					return 2;
@@ -35431,3 +35430,4 @@
 	Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidGhyZWUuanMiLCJzb3VyY2VzIjpbXSwic291cmNlc0NvbnRlbnQiOltdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiIn0=

@@ -19228,10 +19228,9 @@ function WebGLRenderer(parameters = {}) {
 	this.toneMapping = NoToneMapping;
 	this.toneMappingExposure = 1.0; //
 
-	Object.defineProperties(WebGLRenderer.prototype, {
+	Object.defineProperties(this, {
 		// @deprecated since r136, 0e21088102b4de7e0a0a33140620b7a3424b9e6d
 		gammaFactor: {
-			configurable: true,
 			get: function () {
 				console.warn('THREE.WebGLRenderer: .gammaFactor has been removed.');
 				return 2;
@@ -35425,3 +35424,4 @@ exports.ZeroSlopeEnding = ZeroSlopeEnding;
 exports.ZeroStencilOp = ZeroStencilOp;
 exports._SRGBAFormat = _SRGBAFormat;
 exports.sRGBEncoding = sRGBEncoding;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidGhyZWUuY2pzIiwic291cmNlcyI6W10sInNvdXJjZXNDb250ZW50IjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiJ9
