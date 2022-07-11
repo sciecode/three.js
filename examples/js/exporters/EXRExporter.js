@@ -108,7 +108,7 @@
 
 		}
 
-		renderer.readRenderTargetPixels( rtt, 0, 0, info.width, info.height, dataBuffer );
+		renderer.readPixels( rtt, 0, 0, info.width, info.height, dataBuffer );
 		return dataBuffer;
 
 	}

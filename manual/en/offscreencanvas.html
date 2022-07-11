@@ -412,7 +412,7 @@ picking parts. We copy in the <code class="notranslate" translate="no">PickHelpe
     this.pickedObject = null;
     this.pickedObjectSavedColor = 0;
   }
-  pick(normalizedPosition, scene, camera, time) {
+  async pick(normalizedPosition, scene, camera, time) {
     // restore the color if there is a picked object
     if (this.pickedObject) {
       this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);

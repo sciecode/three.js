@@ -192,7 +192,7 @@
 
 			}
 
-			function render() {
+			async function render() {
 
 				const time = Date.now() * 0.0015;
 
@@ -225,7 +225,11 @@
 				renderer.render( sceneScreen, cameraRTT );
 
 				const read = new Float32Array( 4 );
-				renderer.readRenderTargetPixels( rtTexture, windowHalfX + mouseX, windowHalfY - mouseY, 1, 1, read );
+
+				if ( renderer.capabilities.isWebGL2 ) 
+					await renderer.readPixelsAsync( rtTexture, windowHalfX + mouseX, windowHalfY - mouseY, 1, 1, read );
+				else
+					renderer.readPixels( rtTexture, windowHalfX + mouseX, windowHalfY - mouseY, 1, 1, read );
 
 				valueNode.innerHTML = 'r:' + read[ 0 ] + '<br/>g:' + read[ 1 ] + '<br/>b:' + read[ 2 ];
 

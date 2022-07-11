@@ -53,7 +53,7 @@ and to do it we'll add the <code class="notranslate" translate="no">PickHelper</
     this.pickedObject = null;
     this.pickedObjectSavedColor = 0;
   }
-  pick(normalizedPosition, scene, camera, time) {
+  async pick(normalizedPosition, scene, camera, time) {
     // restore the color if there is a picked object
     if (this.pickedObject) {
       this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
@@ -302,7 +302,7 @@ texture coordinates go around the ring so it works for our needs.</p>
 +    this.selectDuration = 2;
 +    this.lastTime = 0;
   }
-  pick(normalizedPosition, scene, camera, time) {
+  async pick(normalizedPosition, scene, camera, time) {
 +    const elapsedTime = time - this.lastTime;
 +    this.lastTime = time;
 

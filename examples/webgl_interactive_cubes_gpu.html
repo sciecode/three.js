@@ -199,7 +199,7 @@
 
 			}
 
-			function pick() {
+			async function pick() {
 
 				//render the picking scene off-screen
 
@@ -221,8 +221,11 @@
 				const pixelBuffer = new Uint8Array( 4 );
 
 				//read the pixel
-
-				renderer.readRenderTargetPixels( pickingTexture, 0, 0, 1, 1, pixelBuffer );
+				if ( renderer.capabilities.isWebGL2 ) {
+					await renderer.readPixelsAsync( pickingTexture, 0, 0, 1, 1, pixelBuffer );
+				} else {
+					renderer.readPixels( pickingTexture, 0, 0, 1, 1, pixelBuffer );
+				}
 
 				//interpret the pixel as an ID
 

@@ -109,7 +109,7 @@
 						renderer.setRenderTarget( rt );
 						renderer.render( clone, camera );
 
-						renderer.readRenderTargetPixels( rt, 0, 0, SIZE, SIZE, buffer );
+						renderer.readPixels( rt, 0, 0, SIZE, SIZE, buffer );
 
 						color[ 0 ] = 0;
 						color[ 1 ] = 0;

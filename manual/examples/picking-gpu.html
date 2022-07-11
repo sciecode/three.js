@@ -141,7 +141,7 @@ function main() {
       this.pickedObject = null;
       this.pickedObjectSavedColor = 0;
     }
-    pick(cssPosition, scene, camera, time) {
+    async pick(cssPosition, scene, camera, time) {
       const {pickingTexture, pixelBuffer} = this;
 
       // restore the color if there is a picked object
@@ -166,14 +166,19 @@ function main() {
       renderer.setRenderTarget(null);
       // clear the view offset so rendering returns to normal
       camera.clearViewOffset();
-      //read the pixel
-      renderer.readRenderTargetPixels(
-          pickingTexture,
-          0,   // x
-          0,   // y
-          1,   // width
-          1,   // height
-          pixelBuffer);
+
+      // read the pixel
+      const pickingOptions = [
+        pickingTexture, // renderTarget
+        0, 0,           // x, y
+        1, 1,           // width, height
+        pixelBuffer     // arrayBuffer | typedArray
+      ];
+
+      if ( renderer.isWebGL2 )
+        await renderer.readPixelsAsync(...pickingOptions)
+      else 
+        renderer.readPixels(...pickingOptions);
 
       const id =
           (pixelBuffer[0] << 16) |

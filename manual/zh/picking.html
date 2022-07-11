@@ -304,7 +304,7 @@ for (let i = 0; i &lt; numObjects; ++i) {
     this.pickedObject = null;
     this.pickedObjectSavedColor = 0;
   }
-  pick(cssPosition, scene, camera, time) {
+  async pick(cssPosition, scene, camera, time) {
 +    const {pickingTexture, pixelBuffer} = this;
 
     // 如果已经存在拾取的对象，将其颜色恢复
@@ -331,7 +331,7 @@ for (let i = 0; i &lt; numObjects; ++i) {
 +    // 清理视野偏移，回归正常
 +    camera.clearViewOffset();
 +    // 读取像素
-+    renderer.readRenderTargetPixels(
++    renderer.readPixels(
 +        pickingTexture,
 +        0,   // x
 +        0,   // y

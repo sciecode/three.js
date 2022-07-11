@@ -125,7 +125,7 @@ class LightProbeGenerator {
 
 	static fromCubeRenderTarget( renderer, cubeRenderTarget ) {
 
-		// The renderTarget must be set to RGBA in order to make readRenderTargetPixels works
+		// The renderTarget must be set to RGBA in order to make readPixels works
 		let totalWeight = 0;
 
 		const coord = new Vector3();
@@ -143,7 +143,7 @@ class LightProbeGenerator {
 
 			const imageWidth = cubeRenderTarget.width; // assumed to be square
 			const data = new Uint8Array( imageWidth * imageWidth * 4 );
-			renderer.readRenderTargetPixels( cubeRenderTarget, 0, 0, imageWidth, imageWidth, data, faceIndex );
+			renderer.readPixels( cubeRenderTarget, 0, 0, imageWidth, imageWidth, data, faceIndex );
 
 			const pixelSize = 2 / imageWidth;
 

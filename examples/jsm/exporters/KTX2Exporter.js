@@ -248,7 +248,7 @@ function toDataTexture( renderer, rtt ) {
 
 	}
 
-	renderer.readRenderTargetPixels( rtt, 0, 0, rtt.width, rtt.height, view );
+	renderer.readPixels( rtt, 0, 0, rtt.width, rtt.height, view );
 
 	return new DataTexture( view, rtt.width, rtt.height, rtt.texture.format, rtt.texture.type );
 

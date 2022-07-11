@@ -609,7 +609,7 @@
 						readWaterLevelShader.uniforms[ 'point1' ].value.set( u, v );
 						gpuCompute.doRenderTarget( readWaterLevelShader, readWaterLevelRenderTarget );
 
-						renderer.readRenderTargetPixels( readWaterLevelRenderTarget, 0, 0, 4, 1, readWaterLevelImage );
+						renderer.readPixels( readWaterLevelRenderTarget, 0, 0, 4, 1, readWaterLevelImage );
 						const pixels = new Float32Array( readWaterLevelImage.buffer );
 
 						// Get orientation

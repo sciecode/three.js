@@ -310,7 +310,7 @@ for (let i = 0; i &lt; numObjects; ++i) {
     this.pickedObject = null;
     this.pickedObjectSavedColor = 0;
   }
-  pick(cssPosition, scene, camera, time) {
+  async pick(cssPosition, scene, camera, time) {
 +    const {pickingTexture, pixelBuffer} = this;
 
     // 기존에 선택된 요소가 있는 경우 색을 복원합니다
@@ -337,13 +337,17 @@ for (let i = 0; i &lt; numObjects; ++i) {
 +    // view offset을 정상으로 돌려 원래의 화면을 렌더링하도록 합니다
 +    camera.clearViewOffset();
 +    // 픽셀을 감지합니다
-+    renderer.readRenderTargetPixels(
-+        pickingTexture,
-+        0,   // x
-+        0,   // y
-+        1,   // width
-+        1,   // height
-+        pixelBuffer);
++    const pickingOptions = [
++      pickingTexture, // renderTarget
++      0, 0,           // x, y
++      1, 1,           // width, height
++      pixelBuffer     // arrayBuffer | typedArray
++    ];
++    
++    if ( renderer.isWebGL2 )
++      await renderer.readPixelsAsync(...pickingOptions)
++    else 
++      renderer.readPixels(...pickingOptions);
 +
 +    const id =
 +        (pixelBuffer[0] &lt;&lt; 16) |

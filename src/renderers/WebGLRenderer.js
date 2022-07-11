@@ -216,6 +216,32 @@ function WebGLRenderer( parameters = {} ) {
 
 	}
 
+	// asynchronous fence guard
+
+	function syncGuard( gl, webglSync, interval ) {
+
+		return new Promise((resolve, reject) => {
+
+			const start = performance.now();
+			const checkFenceSync = function () {
+
+				switch ( gl.clientWaitSync( webglSync, 0, interval ) ) {
+
+					case gl.WAIT_FAILED:
+						reject( performance.now() - start ); break;
+					case gl.TIMEOUT_EXPIRED:
+						setTimeout( checkFenceSync, interval ); break;
+					default: 
+						resolve( performance.now() - start );
+				}
+
+			}; checkFenceSync();
+
+		} );
+
+	}
+
+
 	// initialize
 
 	let _gl = _context;
@@ -1999,11 +2025,11 @@ function WebGLRenderer( parameters = {} ) {
 
 	};
 
-	this.readRenderTargetPixels = function ( renderTarget, x, y, width, height, buffer, activeCubeFaceIndex ) {
+	this.readPixels = function ( renderTarget, x, y, width, height, buffer, activeCubeFaceIndex ) {
 
 		if ( ! ( renderTarget && renderTarget.isWebGLRenderTarget ) ) {
 
-			console.error( 'THREE.WebGLRenderer.readRenderTargetPixels: renderTarget is not THREE.WebGLRenderTarget.' );
+			console.error( 'THREE.WebGLRenderer.readPixels: renderTarget is not THREE.WebGLRenderTarget.' );
 			return;
 
 		}
@@ -2028,7 +2054,7 @@ function WebGLRenderer( parameters = {} ) {
 
 				if ( textureFormat !== RGBAFormat && utils.convert( textureFormat ) !== _gl.getParameter( _gl.IMPLEMENTATION_COLOR_READ_FORMAT ) ) {
 
-					console.error( 'THREE.WebGLRenderer.readRenderTargetPixels: renderTarget is not in RGBA or implementation defined format.' );
+					console.error( 'THREE.WebGLRenderer.readPixels: renderTarget is not in RGBA or implementation defined format.' );
 					return;
 
 				}
@@ -2039,7 +2065,7 @@ function WebGLRenderer( parameters = {} ) {
 					! ( textureType === FloatType && ( capabilities.isWebGL2 || extensions.has( 'OES_texture_float' ) || extensions.has( 'WEBGL_color_buffer_float' ) ) ) && // Chrome Mac >= 52 and Firefox
 					! halfFloatSupportedByExt ) {
 
-					console.error( 'THREE.WebGLRenderer.readRenderTargetPixels: renderTarget is not in UnsignedByteType or implementation defined type.' );
+					console.error( 'THREE.WebGLRenderer.readPixels: renderTarget is not in UnsignedByteType or implementation defined type.' );
 					return;
 
 				}
@@ -2063,6 +2089,105 @@ function WebGLRenderer( parameters = {} ) {
 
 		}
 
+	};
+
+	this.readPixelsAsync = async function ( renderTarget, x, y, width, height, buffer, activeCubeFaceIndex, preventFlush ) {
+	
+		if ( ! ( renderTarget && renderTarget.isWebGLRenderTarget ) ) {
+	
+			console.error( 'THREE.WebGLRenderer.readPixelsAsync: renderTarget is not THREE.WebGLRenderTarget.' );
+			return;
+	
+		} 
+	
+		if ( _this.isWebGL1Renderer ) {
+	
+			console.warn( 'THREE.WebGLRenderer.readPixelsAsync: can only be used with WebGL2.' );
+			return;
+	
+		}
+	
+		let framebuffer = properties.get( renderTarget ).__webglFramebuffer, __webglBuffer, __webglSync;
+	
+		if ( renderTarget.isWebGLCubeRenderTarget && activeCubeFaceIndex !== undefined ) {
+	
+			framebuffer = framebuffer[ activeCubeFaceIndex ];
+	
+		}
+	
+		if ( framebuffer ) {
+	
+			state.bindFramebuffer( _gl.FRAMEBUFFER, framebuffer );
+	
+			try {
+	
+				const texture = renderTarget.texture;
+				const textureFormat = texture.format;
+				const textureType = texture.type;
+	
+				if ( textureFormat !== RGBAFormat && utils.convert( textureFormat ) !== _gl.getParameter( _gl.IMPLEMENTATION_COLOR_READ_FORMAT ) ) {
+	
+					console.error( 'THREE.WebGLRenderer.readPixelsAsync: renderTarget is not in RGBA or implementation defined format.' );
+					return;
+	
+				}
+	
+				const halfFloatSupportedByExt = ( textureType === HalfFloatType ) && ( extensions.has( 'EXT_color_buffer_half_float' ) || ( capabilities.isWebGL2 && extensions.has( 'EXT_color_buffer_float' ) ) );
+	
+				if ( textureType !== UnsignedByteType && utils.convert( textureType ) !== _gl.getParameter( _gl.IMPLEMENTATION_COLOR_READ_TYPE ) && // Edge and Chrome Mac < 52 (#9513)
+					! ( textureType === FloatType && ( capabilities.isWebGL2 || extensions.has( 'OES_texture_float' ) || extensions.has( 'WEBGL_color_buffer_float' ) ) ) && // Chrome Mac >= 52 and Firefox
+					! halfFloatSupportedByExt ) {
+	
+					console.error( 'THREE.WebGLRenderer.readPixelsAsync: renderTarget is not in UnsignedByteType or implementation defined type.' );
+					return;
+	
+				}
+	
+				// the following if statement ensures valid read requests (no out-of-bounds pixels, see #8604)
+	
+				if ( ( x >= 0 && x <= ( renderTarget.width - width ) ) && ( y >= 0 && y <= ( renderTarget.height - height ) ) ) {
+	
+					__webglBuffer = _gl.createBuffer();
+	
+					_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, __webglBuffer );
+					_gl.bufferData( _gl.PIXEL_PACK_BUFFER, buffer.byteLength, _gl.STREAM_READ );
+					_gl.readPixels( x, y, width, height, utils.convert( textureFormat ), utils.convert( textureType ), 0 );
+
+					__webglSync = _gl.fenceSync( _gl.SYNC_GPU_COMMANDS_COMPLETE, 0 );
+
+					if ( !preventFlush ) _gl.flush();
+	
+				}
+	
+			} finally {
+	
+				// restore framebuffer of current render target if necessary
+	
+				const framebuffer = ( _currentRenderTarget !== null ) ? properties.get( _currentRenderTarget ).__webglFramebuffer : null;
+				state.bindFramebuffer( _gl.FRAMEBUFFER, framebuffer );
+	
+			}
+	
+			if ( __webglSync !== undefined ) {
+		
+				try {
+
+					await syncGuard( _gl, __webglSync, _gl.MAX_CLIENT_WAIT_TIMEOUT_WEBGL );
+	
+					_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, __webglBuffer );
+					_gl.getBufferSubData( _gl.PIXEL_PACK_BUFFER, 0, buffer );
+		
+				} finally {
+		
+					_gl.deleteSync( __webglSync );
+					_gl.deleteBuffer( __webglBuffer );
+		
+				}
+	
+			}
+	
+		}
+	
 	};
 
 	this.copyFramebufferToTexture = function ( position, texture, level = 0 ) {
