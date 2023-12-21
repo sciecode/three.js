@@ -492,9 +492,9 @@ class OrbitControls extends EventDispatcher {
 
 		}
 
-		function getZoomScale() {
+		function getZoomScale( norm_delta ) {
 
-			return Math.pow( 0.95, scope.zoomSpeed );
+			return Math.pow( 0.95, norm_delta / 100 * scope.zoomSpeed );
 
 		}
 
@@ -697,15 +697,15 @@ class OrbitControls extends EventDispatcher {
 
 			dollyDelta.subVectors( dollyEnd, dollyStart );
 
-			console.log(dollyDelta.y);
+			const normalized_delta = Math.abs( dollyDelta.y / window.devicePixelRatio );
 
 			if ( dollyDelta.y > 0 ) {
 
-				dollyOut( getZoomScale() );
+				dollyOut( getZoomScale( normalized_delta ) );
 
 			} else if ( dollyDelta.y < 0 ) {
 
-				dollyIn( getZoomScale() );
+				dollyIn( getZoomScale( normalized_delta ) );
 
 			}
 
@@ -733,15 +733,17 @@ class OrbitControls extends EventDispatcher {
 
 			updateZoomParameters( event.clientX, event.clientY );
 
-			console.log("mode:", event.deltaMode, "deltaY:", event.deltaY);
+			const normalized_delta = Math.abs( event.deltaY / window.devicePixelRatio );
+
+			console.log("deltaY:", event.deltaY, "norm_deltaY:", normalized_delta / 100);
 
 			if ( event.deltaY < 0 ) {
 
-				dollyIn( getZoomScale() );
+				dollyIn( getZoomScale( normalized_delta ) );
 
 			} else if ( event.deltaY > 0 ) {
 
-				dollyOut( getZoomScale() );
+				dollyOut( getZoomScale( normalized_delta ) );
 
 			}
 
