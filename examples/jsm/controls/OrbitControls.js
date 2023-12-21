@@ -697,6 +697,8 @@ class OrbitControls extends EventDispatcher {
 
 			dollyDelta.subVectors( dollyEnd, dollyStart );
 
+			console.log(dollyDelta.y);
+
 			if ( dollyDelta.y > 0 ) {
 
 				dollyOut( getZoomScale() );
@@ -730,6 +732,8 @@ class OrbitControls extends EventDispatcher {
 		function handleMouseWheel( event ) {
 
 			updateZoomParameters( event.clientX, event.clientY );
+
+			console.log("mode:", event.deltaMode, "deltaY:", event.deltaY);
 
 			if ( event.deltaY < 0 ) {
 
