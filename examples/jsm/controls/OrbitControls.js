@@ -1224,8 +1224,6 @@ class OrbitControls extends EventDispatcher {
 
 			}
 
-			console.log( "mode:", mode, "deltaY:", newEvent.deltaY );
-
 			return newEvent;
 
 		}
