@@ -1015,6 +1015,8 @@ class OrbitControls extends EventDispatcher {
 
 			addPointer( event );
 
+			console.log( `pointerDown - id: '${event.pointerId}', type: '${event.pointerType}', btn: '${event.button}'` )
+
 			if ( event.pointerType === 'touch' ) {
 
 				onTouchStart( event );
@@ -1046,6 +1048,8 @@ class OrbitControls extends EventDispatcher {
 		function onPointerUp( event ) {
 
 			removePointer( event );
+
+			console.log( `pointerUp - id: '${event.pointerId}', type: '${event.pointerType}', btn: '${event.button}'` )
 
 			switch ( pointers.length ) {
 
