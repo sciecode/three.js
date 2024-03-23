@@ -56,11 +56,11 @@
 				camera = new THREE.OrthographicCamera( - aspect, aspect, 1, - 1, 0, 1 );
 
 				new EXRLoader()
-					.load( 'textures/memorial.exr', function ( texture, textureData ) {
+					.load( 'textures/blobs.exr', function ( texture, textureData ) {
 
 						// memorial.exr is NPOT
 
-						//console.log( textureData );
+						console.log( textureData );
 						//console.log( texture );
 
 						// EXRLoader sets these default settings
